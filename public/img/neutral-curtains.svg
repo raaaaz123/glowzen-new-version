@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="34 8 332 415" width="400" height="500" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Illustrated portrait">
+<defs>
+  <radialGradient id="bg-neutral-curtains" cx="50%" cy="34%" r="78%">
+    <stop offset="0" stop-color="#1A1720"/><stop offset="1" stop-color="#0C0B0F"/>
+  </radialGradient>
+  <radialGradient id="glow-neutral-curtains" cx="50%" cy="50%" r="50%">
+    <stop offset="0" stop-color="#E5B26A" stop-opacity="0.22"/>
+    <stop offset="1" stop-color="#E5B26A" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="skin-neutral-curtains" x1="20%" y1="0%" x2="90%" y2="100%">
+    <stop offset="0" stop-color="#D9A97F"/><stop offset="1" stop-color="#B0805A"/>
+  </linearGradient>
+  <linearGradient id="hair-neutral-curtains" x1="25%" y1="0%" x2="80%" y2="100%">
+    <stop offset="0" stop-color="#4A3227"/><stop offset="1" stop-color="#2B1C15"/>
+  </linearGradient>
+  <linearGradient id="cloth-neutral-curtains" x1="0%" y1="0%" x2="0%" y2="100%">
+    <stop offset="0" stop-color="#1D1B21"/><stop offset="1" stop-color="#1D1B21" stop-opacity=".55"/>
+  </linearGradient>
+  <linearGradient id="vig-neutral-curtains" x1="0%" y1="55%" x2="0%" y2="100%">
+    <stop offset="0" stop-color="#0C0B0F" stop-opacity="0"/><stop offset="1" stop-color="#0C0B0F" stop-opacity=".55"/>
+  </linearGradient>
+</defs>
+<rect width="400" height="500" fill="url(#bg-neutral-curtains)"/>
+<ellipse cx="200" cy="215" rx="215" ry="215" fill="url(#glow-neutral-curtains)"/>
+
+<path d="M52 500C52 402 132 356 200 356C268 356 348 402 348 500Z" fill="url(#cloth-neutral-curtains)"/>
+<path d="M176 284c0 42-4 60-13 80h74c-9-20-13-38-13-80Z" fill="#B0805A" opacity=".95"/>
+<ellipse cx="200" cy="298" rx="42" ry="17" fill="#0A090D" opacity=".22"/>
+<ellipse cx="126" cy="212" rx="12" ry="18" fill="#B0805A"/>
+<ellipse cx="274" cy="212" rx="12" ry="18" fill="#B0805A"/>
+<path d="M131 198C131 142 159 106 200 106C241 106 269 142 269 198C269 241 255 273 235 295C221 310 210 319 200 319C190 319 179 310 165 295C145 273 131 241 131 198Z" fill="url(#skin-neutral-curtains)"/>
+
+<g fill="url(#hair-neutral-curtains)" stroke="url(#hair-neutral-curtains)">
+  <path d="M122 214C118 142 152 92 200 92C248 92 282 142 278 214C274 192 269 173 262 160C249 149 234 150 222 159C212 143 207 131 200 126C193 131 188 143 178 159C166 150 151 149 138 160C131 173 126 192 122 214Z" stroke="none"/>
+  
+</g>
+<g opacity=".8">
+  <path d="M156 187c10-8 24-9 34-3" stroke="#2B1C15" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <path d="M244 187c-10-8-24-9-34-3" stroke="#2B1C15" stroke-width="5" stroke-linecap="round" fill="none"/>
+</g>
+<g>
+  <path d="M158 210c9-11 23-11 32 0-9 10-23 10-32 0Z" fill="#F6F2EC" opacity=".9"/>
+  <path d="M210 210c9-11 23-11 32 0-9 10-23 10-32 0Z" fill="#F6F2EC" opacity=".9"/>
+  <circle cx="174" cy="210" r="5.4" fill="#2C2229"/><circle cx="226" cy="210" r="5.4" fill="#2C2229"/>
+  
+</g>
+<path d="M200 220c-3 14-6 24-9 30 4 4 12 4 17 0" stroke="#B0805A" stroke-width="3.4" fill="none" stroke-linecap="round" opacity=".75"/>
+<path d="M182 272c11-7 25-7 36 0-8 11-28 11-36 0Z" fill="#B4705F" opacity=".82"/>
+<path d="M182 272c11-3 25-3 36 0" stroke="#8C4F42" stroke-width="1.6" fill="none" opacity=".6"/>
+<rect width="400" height="500" fill="url(#vig-neutral-curtains)"/>
+</svg>

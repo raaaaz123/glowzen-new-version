@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="g" x1="0.18" y1="0.08" x2="0.82" y2="0.94">
+      <stop offset="0" stop-color="#f4dbae"/>
+      <stop offset="0.52" stop-color="#e5b26a"/>
+      <stop offset="1" stop-color="#a8763f"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.46" r="0.52">
+      <stop offset="0" stop-color="#e5b26a" stop-opacity="0.30"/>
+      <stop offset="0.62" stop-color="#e5b26a" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#e5b26a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="#0b0a0e"/>
+  <rect width="512" height="512" rx="112" fill="url(#halo)"/>
+
+  <!-- four-point spark: straight-sided cusps, the app's "glow" mark -->
+  <path fill="url(#g)"
+        d="M256 62
+           C 268 152, 300 200, 386 222
+           C 300 244, 268 292, 256 382
+           C 244 292, 212 244, 126 222
+           C 212 200, 244 152, 256 62 Z"/>
+
+  <!-- small companion spark, lower right -->
+  <path fill="url(#g)" opacity="0.9"
+        d="M368 300
+           C 374 344, 390 368, 434 378
+           C 390 388, 374 412, 368 456
+           C 362 412, 346 388, 302 378
+           C 346 368, 362 344, 368 300 Z"/>
+</svg>

@@ -1,0 +1,33 @@
+rules_version = '2';
+
+// Glowzen WEB rules.
+//
+// ⚠️  MERGE THIS INTO YOUR EXISTING RULESET — DO NOT REPLACE IT.
+//     The mobile app's glowface_* rules live in the same ruleset. Publishing
+//     this file on its own would delete them and lock the mobile app out.
+//
+// Copy the two `match` blocks below into the ruleset you already have, inside
+// `match /databases/{database}/documents { … }`.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── keep every existing glowface_* rule here, untouched ──
+
+
+    // ── web app ────────────────────────────────────────────────────────────
+    // A signed-in user owns their own document tree and nothing else. The uid
+    // in the path must equal the uid on the token, so one user can never read
+    // or write another's analyses, plan or progress.
+    match /glowzen_web_users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      match /{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // Anything not matched above stays denied by default. The web app never
+    // touches the glowface_* collections.
+  }
+}

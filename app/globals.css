@@ -1,26 +1,360 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ------------------------------------------------------------------ tokens */
+@theme {
+  /* Surfaces run from a violet-cast near-black up to a raised card tone. */
+  --color-ink: #0b0a0e;
+  --color-surface: #131118;
+  --color-raised: #1b1823;
+  --color-line: #272231;
+  --color-linen: #f3efe7;
+
+  /* One accent: studio light on skin. */
+  --color-champagne: #e5b26a;
+  --color-champagne-hi: #f4dbae;
+  --color-champagne-lo: #a8763f;
+
+  --color-cream: #f5f2ed;
+  --color-muted: #9c95a6;
+  --color-faint: #6a6474;
+  --color-sage: #93c4a5;
+
+  /* Sophisticated Playful. Named literally so the page can reach for a spec
+     colour directly, while the shared components keep using the tokens above
+     and get remapped by `.theme-sp`. */
+  --color-charcoal: #171e19;
+  --color-graygreen: #b7c6c2;
+  /* Fills, bars, rings, icons and the display numerals. Light and blue-cast. */
+  --color-violet: #6366f1;
+  /* The same hue taken deep enough to be read at 10px on the off-white field. */
+  --color-violet-ink: #4338ca;
+  --color-offwhite: #eeebe3;
+
+  /* Foreground for anything sitting on the accent, and the accent's own glow.
+     Both flip with the theme, so no component hardcodes them. */
+  --color-on-accent: #1a1409;
+
+  --shadow-soft: 0 20px 50px -12px rgb(0 0 0 / 0.08);
+  /* Toasts and other floating chrome. Reads as a glow on ink, a drop on paper. */
+  --shadow-pop: 0 18px 50px -20px rgb(0 0 0 / 0.9);
+
+  /* Failure states. Tuned for a dark ground here and re-tuned by the theme —
+     a colour that reads as "warning" on ink is washed out on paper. */
+  --color-danger: #e8918e;
+  --color-danger-soft: #f0b7b4;
+  --color-danger-bg: #e88a8a;
+
+  /* Foreground for a dark chip sitting on a linen card, which is light in
+     both themes and so keeps its dark-on-light relationship either way. */
+  --color-linen-ink: #221d26;
+
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-card: 24px;
+  --radius-sheet: 28px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+/* -------------------------------------------------------------------- base */
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --accent-glow: rgb(229 178 106 / 0.65);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-ink);
+    color: var(--color-cream);
+    font-family: var(--font-sans);
+    overscroll-behavior-y: none;
+  }
+
+  ::selection {
+    background: var(--color-champagne);
+    color: #17131a;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-champagne);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  button,
+  a {
+    -webkit-user-select: none;
+    user-select: none;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* --------------------------------------------------------------- utilities */
+@utility shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 26.875rem; /* phone-first column */
+
+  /* Tablets sit between the two designs: the phone column is stranded in the
+     middle of an iPad, and the desktop layout with its side rail doesn't
+     start until lg. One step up covers the gap. */
+  @media (width >= 48rem) {
+    max-width: 34rem;
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility safe-b {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.75rem);
+}
+
+@utility safe-t {
+  padding-top: max(env(safe-area-inset-top, 0px), 1.5rem);
+}
+
+/* Headline treatment: the UI face, set heavy and tight so large sizes hold. */
+@utility type-display {
+  font-family: var(--font-sans);
+  font-weight: 650;
+  letter-spacing: -0.032em;
+  line-height: 1.06;
+}
+
+@utility eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-faint);
+}
+
+@utility hairline {
+  border: 1px solid color-mix(in srgb, var(--color-line) 100%, transparent);
+}
+
+/* ---------------------------------------------------------------- movement */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@keyframes halo {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.06);
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.972);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes tick-in {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-12deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sweep {
+  0% {
+    transform: translateY(-110%);
+  }
+  100% {
+    transform: translateY(210%);
+  }
+}
+
+@utility animate-rise {
+  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@utility animate-fade {
+  animation: fade 0.4s ease both;
+}
+@utility animate-sheet {
+  animation: sheet-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@utility animate-toast {
+  animation: toast-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@utility animate-pop {
+  animation: pop 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@utility animate-tick {
+  animation: tick-in 0.26s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@utility animate-halo {
+  animation: halo 3.2s ease-in-out infinite;
+}
+@utility animate-sweep {
+  animation: sweep 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@utility animate-shimmer {
+  animation: shimmer 1.6s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ------------------------------------------- sophisticated playful (light)
+   A theme scope rather than a stylesheet. Every component reads these same
+   tokens, so the whole app swaps to the charcoal / gray-green / blue-violet
+   palette and Nunito from one class. It sits on <body> in the root layout;
+   the dark tokens above are still the defaults, so dropping the class — or
+   putting it on a subtree — is all it takes to go back or to mix the two. */
+.theme-sp {
+  --font-sans: var(--font-nunito), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
+  --font-mono: var(--font-nunito), -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Surfaces invert: off-white field, white cards, a tinted step for
+     placeholders and skeletons that would otherwise be white on white. */
+  --color-ink: #eeebe3;
+  --color-surface: #ffffff;
+  --color-raised: #e4eae7;
+  --color-line: color-mix(in srgb, #b7c6c2 55%, transparent);
+  --color-linen: #ffffff;
+
+  /* The one accent is now the violet. It sits opposite the gray-green on the
+     wheel, so the borders and tracks read as a deliberate counterpart rather
+     than as neutral filler. */
+  --color-champagne: #6366f1;
+  --color-champagne-hi: #818cf8;
+  --color-champagne-lo: #4338ca;
+  --accent-glow: rgb(99 102 241 / 0.36);
+  --color-on-accent: #ffffff;
+
+  --color-cream: #171e19;
+  --color-muted: #5c6b65;
+  --color-faint: #6f7e77;
+
+  --color-danger: #b3261e;
+  --color-danger-soft: #8c1d18;
+  --color-danger-bg: #b3261e;
+  --color-linen-ink: #171e19;
+
+  --shadow-pop: 0 20px 50px -12px rgb(0 0 0 / 0.14);
+
+  --radius-card: 2.5rem;
+  --radius-sheet: 2.5rem;
+
+  min-height: 100svh;
+  background: var(--color-ink);
+  color: var(--color-cream);
+  font-family: var(--font-sans);
+}
+
+/* Cards carry their depth in the shadow, not the border. */
+.theme-sp .rounded-card {
+  box-shadow: var(--shadow-soft);
+}
+
+/* Nunito has a real 900; the dark theme's 650 would only get synthesised. */
+.theme-sp .type-display {
+  font-weight: 900;
+  letter-spacing: -0.022em;
+}
+
+.theme-sp .eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #8b9a94;
+}
+
+/* 10px / bold / tracked — the label style used for every eyebrow and unit. */
+@utility sp-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------- view transitions */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.25s;
+  animation-timing-function: ease-in-out;
+}
+
+/* Clicks during a transition would otherwise be swallowed by the overlay. */
+::view-transition {
+  pointer-events: none;
+}
+
+@utility animate-view {
+  animation: fade 0.25s ease-in-out both;
 }
