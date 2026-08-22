@@ -9,9 +9,10 @@ import type {
   PlanWeek,
   PlanTemplate,
   ProgressReport,
+  ProgressSnapshot,
   RoutineHabit,
 } from "@/lib/types";
-import { getAnalyses } from "./analysisService";
+import { getAnalyses, scanPhoto } from "./analysisService";
 import { getIdToken } from "@/lib/firebase/auth";
 import { getUserDoc } from "./userService";
 import { EmptyError } from "@/lib/emptyError";
@@ -192,6 +193,15 @@ export async function getProgress(_gender: Gender | null): Promise<ProgressRepor
     })
     .filter((m): m is NonNullable<typeof m> => m !== null);
 
+  // Both frames are re-signed before the report is built. `getAnalyses` hands
+  // back the stored documents untouched, and the `photo` on those is a signed
+  // URL from the day the scan ran, so rendering it straight gives two dead
+  // frames on every visit more than ten minutes after the analysis.
+  const [beforeSnap, afterSnap] = await Promise.all([
+    snapshot(before, "First scan"),
+    snapshot(after, "Latest scan"),
+  ]);
+
   const moved = metrics.reduce((sum, m) => sum + (m.to - m.from), 0);
   const uid = await currentUid();
   const plan = await readDoc<PlanDoc>(paths.plan(uid), EMPTY_PLAN_DOC);
@@ -205,8 +215,8 @@ export async function getProgress(_gender: Gender | null): Promise<ProgressRepor
         ? `Your scores are up ${moved} points across ${metrics.length} areas.`
         : "Here's how your latest scan compares to your first.",
     metrics,
-    before: snapshot(before, "First scan"),
-    after: snapshot(after, "Latest scan"),
+    before: beforeSnap,
+    after: afterSnap,
     timeline: analyses
       .slice()
       .reverse()
@@ -219,11 +229,11 @@ export async function getProgress(_gender: Gender | null): Promise<ProgressRepor
   };
 }
 
-const snapshot = (a: Analysis, dayLabel: string) => ({
+const snapshot = async (a: Analysis, dayLabel: string): Promise<ProgressSnapshot> => ({
   id: a.id,
   dayLabel,
   dateLabel: shortDate(new Date(a.createdAt)),
-  photo: a.photo,
+  photo: await scanPhoto(a),
 });
 
 

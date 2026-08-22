@@ -80,7 +80,10 @@ export function ImageFrame({
         )}
       </div>
 
-      {open && (
+      {/* `src` is nullable, and the same rule as the inline frame applies here:
+          an absent source is not something to open full screen, and an empty
+          one makes the browser re-request the page. */}
+      {open && src && (
         <div className="animate-fade fixed inset-0 z-100 flex flex-col bg-ink/95 backdrop-blur-lg">
           <div className="safe-t flex justify-end p-4">
             <button

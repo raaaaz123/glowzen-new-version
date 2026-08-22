@@ -46,7 +46,11 @@ export default function ProgressPage() {
 
       {data && (
         <div className="animate-rise lg:grid lg:grid-cols-[1fr_1fr] lg:items-start lg:gap-10">
-          <div className="mt-6">
+          {/* min-w-0 on both tracks: the check-in strip is eight fixed-width
+              tiles, and without it that row's min-content sets the column
+              width — the track grows to 774px and squeezes the comparison
+              down to nothing. With it the tiles scroll, as they do on phones. */}
+          <div className="mt-6 min-w-0">
             <CompareSlider
               before={data.before.photo}
               after={data.after.photo}
@@ -75,7 +79,7 @@ export default function ProgressPage() {
             </div>
           </div>
 
-          <div className="mt-10 lg:mt-6">
+          <div className="mt-10 min-w-0 lg:mt-6">
             <Card tone="linen" className="p-6">
               <p className="font-mono text-[10px] tracking-[0.18em] text-black/45 uppercase">
                 30 days in

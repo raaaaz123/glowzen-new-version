@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowRight, CalendarCheck, ListOrdered, Lock, Scissors } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarCheck,
+  ListOrdered,
+  Lock,
+  Quote,
+  Scissors,
+  Sparkles,
+  TrendingUp,
+} from "lucide-react";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
 import { CompareSlider } from "@/components/glow/CompareSlider";
@@ -27,6 +36,29 @@ const BENEFITS = [
   { icon: CalendarCheck, text: "A 30-day plan sized to the time you have." },
 ];
 
+/**
+ * Deliberately not the same three points as BENEFITS above. Those say what the
+ * analysis is; these say what you leave with — the parts you can't get by
+ * standing in front of a mirror, which is the only alternative on offer.
+ */
+const MIRROR = [
+  {
+    icon: Sparkles,
+    title: "Your next cut, on your face",
+    body: "Cuts, beards and shades are rendered on your own photo. You decide from your face, not from a model who isn't you.",
+  },
+  {
+    icon: Quote,
+    title: "The words for the chair",
+    body: "Every recommendation comes with the sentence to say to your barber or stylist. Copy it, hand it over.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Proof you can see",
+    body: "One photo a week, same spot, same light. That's what turns a change you can argue about into one you can see.",
+  },
+];
+
 export default function WelcomePage() {
   const { hasAnalysis, hydrated } = useGlow();
   const [howOpen, setHowOpen] = useState(false);
@@ -35,7 +67,8 @@ export default function WelcomePage() {
   const showcase = SHOWCASE[set];
 
   return (
-    <main className="min-h-svh lg:grid lg:min-h-svh lg:place-items-center lg:px-8 lg:py-10">
+    <main>
+      <section className="min-h-svh lg:grid lg:min-h-svh lg:place-items-center lg:px-8 lg:py-10">
       <div className="lg:grid lg:w-full lg:max-w-[1200px] lg:grid-cols-[1fr_1.05fr] lg:grid-rows-[auto_auto] lg:items-center lg:gap-x-16">
         {/* ——— words */}
         <div className="shell safe-t px-5 lg:col-start-1 lg:row-start-1 lg:max-w-none lg:self-end lg:px-0 lg:pt-0">
@@ -132,6 +165,40 @@ export default function WelcomePage() {
           )}
         </div>
       </div>
+      </section>
+
+      {/* ——— what a mirror can't do */}
+      <section className="border-t border-line" aria-labelledby="mirror-heading">
+        <div className="mx-auto w-full max-w-[1200px] px-5 py-16 lg:px-8 lg:py-20">
+          <p className="eyebrow">What you get</p>
+          <h2
+            id="mirror-heading"
+            className="type-display mt-3 max-w-xl text-[clamp(1.75rem,5.5vw,2.5rem)] text-balance"
+          >
+            Three things a mirror can&apos;t give you.
+          </h2>
+
+          {/* Rules rather than cards: this is the one page with no card stack
+              on it, and three more boxes would flatten the hero it sits under. */}
+          <div className="mt-9 grid divide-y divide-line lg:mt-14 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+            {MIRROR.map(({ icon: Icon, title, body }) => (
+              <div
+                key={title}
+                className="py-7 first:pt-0 last:pb-0 lg:px-9 lg:py-0 lg:first:pl-0 lg:last:pr-0"
+              >
+                <Icon className="size-5 text-champagne" strokeWidth={1.9} aria-hidden />
+                <h3 className="type-display mt-4 text-[20px]">{title}</h3>
+                <p className="mt-2.5 max-w-sm text-[14.5px] leading-relaxed text-muted">{body}</p>
+              </div>
+            ))}
+          </div>
+
+          <ButtonLink href="/questionnaire" className="mt-12 lg:mt-16">
+            Start my glow-up
+            <ArrowRight className="size-4" aria-hidden />
+          </ButtonLink>
+        </div>
+      </section>
 
       <Sheet
         open={howOpen}

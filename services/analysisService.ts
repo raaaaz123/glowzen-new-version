@@ -222,7 +222,7 @@ async function withFreshPhoto(analysis: Analysis): Promise<Analysis> {
  * those expire in ten minutes. Anything looking at an older analysis has to
  * re-sign from the key, or every history thumbnail is a broken frame.
  */
-async function scanPhoto(analysis: {
+export async function scanPhoto(analysis: {
   photoKey?: string | null;
   photo?: string;
 }): Promise<string> {
