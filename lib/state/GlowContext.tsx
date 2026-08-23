@@ -75,6 +75,20 @@ interface GlowValue extends Persisted {
 
 const GlowContext = createContext<GlowValue | null>(null);
 
+/**
+ * Whether the stored expiry has passed.
+ *
+ * An expiry we cannot read is treated as "not expired". A subscription
+ * written before we normalised the field, or one that came back from
+ * Firestore as a Timestamp rather than a string, must not lock a paying
+ * customer out of what they bought — the webhook will correct the record.
+ */
+function hasExpired(sub: SubscriptionState): boolean {
+  if (!sub.expiresAt) return false;
+  const end = new Date(sub.expiresAt).getTime();
+  return Number.isNaN(end) ? false : end <= Date.now();
+}
+
 export function GlowProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<Persisted>({
     answers: EMPTY_ANSWERS,
@@ -193,11 +207,7 @@ export function GlowProvider({ children }: { children: ReactNode }) {
     setPhotoUrl(null);
   }, []);
 
-  const isSubscribed = Boolean(
-    state.subscription?.active &&
-      (!state.subscription.expiresAt ||
-        new Date(state.subscription.expiresAt) > new Date()),
-  );
+  const isSubscribed = Boolean(state.subscription?.active && !hasExpired(state.subscription));
 
   const value = useMemo<GlowValue>(
     () => ({

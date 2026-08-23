@@ -13,23 +13,11 @@ import {
 import { getDb } from "./config";
 
 /**
- * The web app is namespaced away from the mobile app's `glowface_*` collections.
- * Nothing here reads or writes those.
+ * The names live in `./collections` so the server routes can read them without
+ * dragging the browser SDK along. Re-exported here because every call site in
+ * the app already imports them from this module.
  */
-export const WEB_NAMESPACE = "glowzen_web";
-
-export const collections = {
-  users: `${WEB_NAMESPACE}_users`,
-} as const;
-
-export const paths = {
-  user: (uid: string) => `${collections.users}/${uid}`,
-  analyses: (uid: string) => `${collections.users}/${uid}/analyses`,
-  analysis: (uid: string, id: string) => `${collections.users}/${uid}/analyses/${id}`,
-  plan: (uid: string) => `${collections.users}/${uid}/state/plan`,
-  progress: (uid: string) => `${collections.users}/${uid}/state/progress`,
-  previews: (uid: string) => `${collections.users}/${uid}/state/previews`,
-} as const;
+export { WEB_NAMESPACE, collections, paths } from "./collections";
 
 /**
  * Firestore is optional infrastructure here: every screen has local data to fall

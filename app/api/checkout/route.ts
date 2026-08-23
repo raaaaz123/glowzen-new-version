@@ -25,7 +25,9 @@ export async function POST(req: NextRequest) {
 
     const checkout = await polar.checkouts.create({
       products: [productId],
-      successUrl: `${origin}/results?subscribed=1`,
+      // {CHECKOUT_ID} is filled in by Polar on the redirect back, so the app
+      // can verify the payment itself instead of waiting on the webhook.
+      successUrl: `${origin}/results?subscribed=1&checkout_id={CHECKOUT_ID}`,
       customerEmail: email || undefined,
       metadata: {
         firebaseUid: uid,

@@ -1,146 +1,121 @@
-import { type NextRequest, NextResponse } from "next/server";
 import { Webhooks } from "@polar-sh/nextjs";
-
-// Firebase Admin for server-side writes (bypasses client security rules)
-// import { getAdminDb } from "@/lib/server/firebaseAdmin";
+import { resolvePlan } from "@/lib/polar";
+import {
+  findUid,
+  isActiveStatus,
+  subscriptionFrom,
+  writeSubscription,
+} from "@/lib/server/subscriptions";
 
 /**
  * POST /api/webhook/polar
  *
- * Handles Polar subscription lifecycle events:
- * - subscription.created  → activate subscription in Firestore
- * - subscription.updated  → update plan/status
- * - subscription.canceled → mark expired
- * - order.created         → log for analytics
+ * Polar's subscription lifecycle, written through to Firestore. The signature
+ * is verified by `Webhooks()` before any of this runs; the Firebase uid rides
+ * along in the checkout metadata.
  *
- * The webhook verifies the Polar signature before processing. The Firebase
- * uid is passed as metadata.firebaseUid from the checkout session.
+ * ⚠️  The URL registered in Polar must be exactly
+ *     https://www.glowzen.app/api/webhook/polar
+ *     A second slash after the host makes Next.js answer 308 Redirect, and a
+ *     webhook POST does not follow redirects — every delivery fails.
+ *
+ * Every branch writes the whole subscription object, so events arriving out
+ * of order settle on the same state either way.
  */
-
-const COLLECTION = "glowzen_web_users";
-
-/**
- * Map Polar's recurring_interval to our plan names.
- * Trial is identified by the product ID match.
- */
-function resolvePlan(
-  recurringInterval: string | null | undefined,
-  productId: string | null | undefined,
-): "trial" | "monthly" | "yearly" {
-  const trialId = process.env.POLAR_PRODUCT_TRIAL;
-  if (productId && trialId && productId === trialId) return "trial";
-  if (recurringInterval === "year") return "yearly";
-  return "monthly";
-}
-
 export const POST = Webhooks({
   webhookSecret: process.env.POLAR_WEBHOOK_SECRET!,
   onPayload: async (payload) => {
-    // Dynamic import to avoid loading admin SDK on every cold start
-    const { getAdminDb } = await import("@/lib/server/firebaseAdmin");
-    const db = getAdminDb();
-
     switch (payload.type) {
-      /* ── subscription created ────────────────────────────────────────── */
-      case "subscription.created": {
+      /* ── subscription: created, activated, renewed, changed ─────────── */
+      case "subscription.created":
+      case "subscription.active":
+      case "subscription.updated":
+      case "subscription.uncanceled": {
         const sub = payload.data;
-        const uid = (sub.metadata as Record<string, string>)?.firebaseUid;
+        const uid = findUid(sub.metadata, sub.customer?.metadata);
         if (!uid) {
-          console.warn("[webhook] subscription.created missing firebaseUid in metadata");
+          console.warn(`[webhook] ${payload.type}: no firebaseUid in metadata`);
           return;
         }
 
+        // A cancellation scheduled for the end of the period is still a paid
+        // subscription today; `currentPeriodEnd` is what closes it.
+        const active = isActiveStatus(sub.status);
         const plan = resolvePlan(
+          sub.productId ?? sub.product?.id,
           sub.recurringInterval,
-          sub.product?.id,
+          sub.metadata?.plan,
         );
 
-        await db.doc(`${COLLECTION}/${uid}`).set(
-          {
-            subscription: {
-              active: true,
-              plan,
-              expiresAt: sub.currentPeriodEnd ?? null,
-              polarCustomerId: sub.customerId ?? null,
-              polarSubscriptionId: sub.id,
-            },
-            updatedAt: new Date().toISOString(),
-          },
-          { merge: true },
+        await writeSubscription(uid, subscriptionFrom(sub, plan, active));
+        console.log(
+          `[webhook] ${payload.type} → ${uid} (${plan}, status=${sub.status})`,
         );
-
-        console.log(`[webhook] subscription.created → ${uid} (${plan})`);
         break;
       }
 
-      /* ── subscription updated (renewal, plan change) ────────────────── */
-      case "subscription.updated": {
-        const sub = payload.data;
-        const uid = (sub.metadata as Record<string, string>)?.firebaseUid;
-        if (!uid) {
-          console.warn("[webhook] subscription.updated missing firebaseUid");
-          return;
-        }
-
-        const isActive = sub.status === "active";
-        const plan = resolvePlan(
-          sub.recurringInterval,
-          sub.product?.id,
-        );
-
-        await db.doc(`${COLLECTION}/${uid}`).set(
-          {
-            subscription: {
-              active: isActive,
-              plan,
-              expiresAt: sub.currentPeriodEnd ?? null,
-              polarCustomerId: sub.customerId ?? null,
-              polarSubscriptionId: sub.id,
-            },
-            updatedAt: new Date().toISOString(),
-          },
-          { merge: true },
-        );
-
-        console.log(`[webhook] subscription.updated → ${uid} (${plan}, active=${isActive})`);
-        break;
-      }
-
-      /* ── subscription canceled ──────────────────────────────────────── */
+      /* ── cancellation requested: access runs to the end of the period ── */
       case "subscription.canceled": {
         const sub = payload.data;
-        const uid = (sub.metadata as Record<string, string>)?.firebaseUid;
-        if (!uid) {
-          console.warn("[webhook] subscription.canceled missing firebaseUid");
-          return;
-        }
+        const uid = findUid(sub.metadata, sub.customer?.metadata);
+        if (!uid) return;
 
-        // Keep access until the current billing period ends
-        await db.doc(`${COLLECTION}/${uid}`).set(
-          {
-            subscription: {
-              active: false,
-              plan: null,
-              expiresAt: sub.currentPeriodEnd ?? new Date().toISOString(),
-              polarCustomerId: sub.customerId ?? null,
-              polarSubscriptionId: sub.id,
-            },
-            updatedAt: new Date().toISOString(),
-          },
-          { merge: true },
+        const plan = resolvePlan(
+          sub.productId ?? sub.product?.id,
+          sub.recurringInterval,
+          sub.metadata?.plan,
         );
-
-        console.log(`[webhook] subscription.canceled → ${uid}`);
+        await writeSubscription(
+          uid,
+          subscriptionFrom(sub, plan, isActiveStatus(sub.status)),
+        );
+        console.log(`[webhook] subscription.canceled → ${uid} (ends at period end)`);
         break;
       }
 
-      /* ── order created (analytics) ──────────────────────────────────── */
-      case "order.created": {
+      /* ── access actually ends ───────────────────────────────────────── */
+      case "subscription.revoked": {
+        const sub = payload.data;
+        const uid = findUid(sub.metadata, sub.customer?.metadata);
+        if (!uid) return;
+
+        await writeSubscription(uid, {
+          active: false,
+          plan: null,
+          expiresAt: new Date().toISOString(),
+          polarCustomerId: sub.customerId ?? null,
+          polarSubscriptionId: sub.id ?? null,
+        });
+        console.log(`[webhook] subscription.revoked → ${uid}`);
+        break;
+      }
+
+      /* ── payment taken ──────────────────────────────────────────────
+         Belt and braces: the order carries the subscription inline, so a
+         missed or out-of-order subscription event still unlocks the app. */
+      case "order.created":
+      case "order.paid":
+      case "order.updated": {
         const order = payload.data;
-        const uid = (order.metadata as Record<string, string>)?.firebaseUid;
-        console.log(
-          `[webhook] order.created → uid=${uid ?? "unknown"} amount=${order.totalAmount} currency=${order.currency}`,
+        const sub = order.subscription;
+        const uid = findUid(order.metadata, sub?.metadata, order.customer?.metadata);
+        if (!uid || !sub || !order.paid) {
+          console.log(
+            `[webhook] ${payload.type}: uid=${uid ?? "unknown"} paid=${order.paid}`,
+          );
+          return;
+        }
+
+        const plan = resolvePlan(
+          order.productId ?? sub.productId,
+          order.product?.recurringInterval ?? sub.recurringInterval,
+          order.metadata?.plan ?? sub.metadata?.plan,
         );
+        await writeSubscription(
+          uid,
+          subscriptionFrom(sub, plan, isActiveStatus(sub.status)),
+        );
+        console.log(`[webhook] ${payload.type} → ${uid} (${plan})`);
         break;
       }
 

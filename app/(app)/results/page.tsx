@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, ArrowUpRight, FlaskConical, Info, Palette, Scissors } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ButtonLink } from "@/components/ui/Button";
 import { Card, SectionHeader } from "@/components/ui/Card";
 import { ImageFrame } from "@/components/ui/ImageFrame";
@@ -13,9 +13,30 @@ import { CardSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import { ErrorState, NothingYet } from "@/components/ui/States";
 import { TopBar } from "@/components/app/TopBar";
 import { useAsync } from "@/lib/useAsync";
-import { useGlow } from "@/lib/state/GlowContext";
+import { getIdToken } from "@/lib/firebase/auth";
+import { useGlow, type SubscriptionState } from "@/lib/state/GlowContext";
 import { useT } from "@/lib/i18n/I18nContext";
 import { getAnalysis } from "@/services/analysisService";
+
+/**
+ * Asks our server to verify the checkout with Polar and store the result.
+ * Returns null rather than throwing on a "not paid yet" answer — that is a
+ * legitimate state right after a redirect, and the webhook will settle it.
+ */
+async function confirmCheckout(checkoutId: string): Promise<SubscriptionState | null> {
+  const token = await getIdToken();
+  if (!token) return null;
+
+  const res = await fetch("/api/checkout/confirm", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+    body: JSON.stringify({ checkoutId }),
+  });
+  if (!res.ok) return null;
+
+  const data = (await res.json()) as { subscription?: SubscriptionState };
+  return data.subscription ?? null;
+}
 
 export default function ResultsPage() {
   const router = useRouter();
@@ -24,22 +45,37 @@ export default function ResultsPage() {
   const { gender, photoUrl, isSubscribed, setSubscription, hydrated } = useGlow();
   const { data, loading, error, empty, reload } = useAsync(() => getAnalysis(gender), [gender]);
   const [methodOpen, setMethodOpen] = useState(false);
+  /** Replacing the URL re-runs the effect below; this keeps it to one run. */
+  const confirmed = useRef(false);
 
-  // After a successful Polar checkout, the user lands here with ?subscribed=1.
-  // The webhook may not have fired yet, so optimistically mark as subscribed
-  // and let the Firestore hydration confirm it.
+  // After a successful Polar checkout the user lands here with ?subscribed=1
+  // and the checkout id. Unlock immediately so nobody who has just paid is
+  // looking at a paywall, then have the server verify the checkout with Polar
+  // and write the real plan and expiry — the webhook is the durable record,
+  // but it is not something this page can wait on.
   useEffect(() => {
-    if (searchParams.get("subscribed") === "1") {
-      setSubscription({
-        active: true,
-        plan: null,
-        expiresAt: null,
-        polarCustomerId: null,
-        polarSubscriptionId: null,
+    if (searchParams.get("subscribed") !== "1" || confirmed.current) return;
+    confirmed.current = true;
+    const checkoutId = searchParams.get("checkout_id");
+
+    setSubscription({
+      active: true,
+      plan: null,
+      expiresAt: null,
+      polarCustomerId: null,
+      polarSubscriptionId: null,
+    });
+    router.replace("/results");
+
+    if (!checkoutId) return;
+    void confirmCheckout(checkoutId)
+      .then((subscription) => {
+        if (subscription) setSubscription(subscription);
+      })
+      .catch((err) => {
+        // The optimistic unlock stands; the webhook still has the last word.
+        console.warn("[results] could not confirm checkout:", err);
       });
-      // Clean the URL
-      router.replace("/results");
-    }
   }, [searchParams, setSubscription, router]);
 
   // Non-subscribers who land here directly get redirected to the preview
