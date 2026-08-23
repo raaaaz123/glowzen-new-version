@@ -842,7 +842,7 @@ function UnlockPanel({ t, onOpen }: { t: T; onOpen: () => void }) {
         <ArrowRight className="size-4 rtl:-scale-x-100" aria-hidden />
       </Button>
       <p className="mt-2.5 text-center text-[11px] text-faint">
-        {t("teaser.startingAt", { amount: PRICE.trial })}
+        {t("teaser.startingAt", { amount: PRICE.yearlyPerMonth })}
       </p>
     </Card>
   );
@@ -1124,7 +1124,7 @@ export default function ResultsPreviewPage() {
           <ArrowRight className="size-4 rtl:-scale-x-100" aria-hidden />
         </Button>
         <p className="mt-2 text-center text-[11px] text-faint">
-          {t("teaser.startingAt", { amount: PRICE.trial })}
+          {t("teaser.startingAt", { amount: PRICE.yearlyPerMonth })}
         </p>
       </div>
 

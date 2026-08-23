@@ -62,15 +62,6 @@ type T = (path: string, vars?: Vars) => string;
 function buildPlans(t: T): PlanDef[] {
   return [
     {
-      key: "trial",
-      label: t("paywall.trialLabel", { days: TRIAL_DAYS }),
-      price: PRICE.trial,
-      period: t("paywall.periodDays", { days: TRIAL_DAYS }),
-      note: t("paywall.trialNote", { amount: PRICE.monthly }),
-      badge: t("paywall.badgeTryFirst"),
-      perMonth: t("paywall.perDay", { amount: PRICE.trialPerDay }),
-    },
-    {
       key: "monthly",
       label: t("paywall.monthlyLabel"),
       price: PRICE.monthly,
