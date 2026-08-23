@@ -10,6 +10,7 @@ import { useGlow } from "@/lib/state/GlowContext";
 import { useT } from "@/lib/i18n/I18nContext";
 import { st } from "@/lib/i18n/runtime";
 import { cn } from "@/lib/utils";
+import { mixpanelTrack } from "@/lib/mixpanel";
 
 const STAGE_MS = 1500;
 
@@ -78,6 +79,9 @@ export default function AnalyzingPage() {
         setPercent(100);
         setStage(ANALYSIS_STAGE_KEYS.length);
         completeAnalysis();
+        mixpanelTrack("analysis_completed", {
+          gender: g,
+        });
         // Subscribers see full results; everyone else sees the blurred preview
         // with paywall.
         const dest = isSubscribed ? "/results" : "/results/preview";

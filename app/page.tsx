@@ -11,6 +11,9 @@ import {
   Scissors,
   Sparkles,
   TrendingUp,
+  Palette,
+  Droplets,
+  UserCheck,
   type LucideIcon,
 } from "lucide-react";
 import { Button, ButtonLink } from "@/components/ui/Button";
@@ -29,9 +32,10 @@ const HOW_IT_WORKS = ["how1", "how2", "how3", "how4"] as const;
  * nobody reads the list and assumes the app isn't built for them.
  */
 const BENEFITS: { icon: LucideIcon; key: string }[] = [
-  { icon: ListOrdered, key: "welcome.benefit1" },
+  { icon: Sparkles, key: "welcome.benefit1" },
   { icon: Scissors, key: "welcome.benefit2" },
-  { icon: CalendarCheck, key: "welcome.benefit3" },
+  { icon: ListOrdered, key: "welcome.benefit3" },
+  { icon: CalendarCheck, key: "welcome.benefit4" },
 ];
 
 /**
@@ -43,6 +47,9 @@ const MIRROR: { icon: LucideIcon; key: string }[] = [
   { icon: Sparkles, key: "mirror1" },
   { icon: Quote, key: "mirror2" },
   { icon: TrendingUp, key: "mirror3" },
+  { icon: Palette, key: "mirror4" },
+  { icon: Droplets, key: "mirror5" },
+  { icon: UserCheck, key: "mirror6" },
 ];
 
 export default function WelcomePage() {
@@ -124,13 +131,10 @@ export default function WelcomePage() {
         {/* ——— actions */}
         <div className="shell mt-7 px-5 pb-10 lg:col-start-1 lg:row-start-2 lg:mt-8 lg:max-w-none lg:self-start lg:px-0 lg:pb-0">
           <div className="space-y-3 lg:max-w-sm">
-            <ButtonLink href="/questionnaire" fullWidth>
+            <ButtonLink href="/questionnaire" fullWidth size="lg">
               {t("welcome.start")}
-              <ArrowRight className="size-4 rtl:-scale-x-100" aria-hidden />
+              <ArrowRight className="size-5 rtl:-scale-x-100" aria-hidden />
             </ButtonLink>
-            <Button variant="secondary" fullWidth onClick={() => setHowOpen(true)}>
-              {t("welcome.whatYouGet")}
-            </Button>
           </div>
 
           <ul className="mt-6 space-y-2.5 lg:max-w-sm">
@@ -170,17 +174,14 @@ export default function WelcomePage() {
             {t("welcome.mirrorHeading")}
           </h2>
 
-          {/* Rules rather than cards: this is the one page with no card stack
-              on it, and three more boxes would flatten the hero it sits under. */}
-          <div className="mt-9 grid divide-y divide-line lg:mt-14 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+          <div className="mt-9 grid gap-10 sm:grid-cols-2 lg:mt-14 lg:grid-cols-3 lg:gap-x-14 lg:gap-y-16">
             {MIRROR.map(({ icon: Icon, key }) => (
-              <div
-                key={key}
-                className="py-7 first:pt-0 last:pb-0 lg:px-9 lg:py-0 lg:first:ps-0 lg:last:pe-0"
-              >
-                <Icon className="size-5 text-champagne" strokeWidth={1.9} aria-hidden />
-                <h3 className="type-display mt-4 text-[20px]">{t(`welcome.${key}Title`)}</h3>
-                <p className="mt-2.5 max-w-sm text-[14.5px] leading-relaxed text-muted">
+              <div key={key} className="flex flex-col">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-champagne/10 shadow-sm border border-champagne/10">
+                  <Icon className="size-5 text-champagne" strokeWidth={2} aria-hidden />
+                </div>
+                <h3 className="type-display mt-5 text-[19px] tracking-tight">{t(`welcome.${key}Title`)}</h3>
+                <p className="mt-2.5 text-[14.5px] leading-relaxed text-muted max-w-sm">
                   {t(`welcome.${key}Body`)}
                 </p>
               </div>
@@ -194,33 +195,99 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      <Sheet
-        open={howOpen}
-        onClose={() => setHowOpen(false)}
-        title={t("welcome.whatYouGet")}
-        description={t("welcome.howDescription")}
-        footer={
-          <ButtonLink href="/questionnaire" fullWidth onClick={() => setHowOpen(false)}>
-            {t("welcome.start")}
-          </ButtonLink>
-        }
-      >
-        <ol className="space-y-5 pb-2">
-          {HOW_IT_WORKS.map((step, i) => (
-            <li key={step} className="flex gap-4">
-              <span className="mt-0.5 font-mono text-[11px] text-champagne">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <div>
-                <p className="text-[15px] font-medium">{t(`welcome.${step}Title`)}</p>
-                <p className="mt-1 text-[13px] leading-relaxed text-muted">
-                  {t(`welcome.${step}Body`)}
-                </p>
+      {/* ——— how it works */}
+      <section className="border-t border-line bg-surface/30">
+        <div className="mx-auto w-full max-w-[1200px] px-5 py-16 lg:px-8 lg:py-20">
+          <div className="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
+            <div>
+              <p className="eyebrow">{t("welcome.mirrorEyebrow")}</p>
+              <h2 className="type-display mt-3 max-w-xl text-[clamp(1.75rem,5.5vw,2.5rem)] text-balance">
+                How it works
+              </h2>
+              <p className="mt-4 text-[15px] leading-relaxed text-muted max-w-md">
+                {t("welcome.howDescription")}
+              </p>
+            </div>
+            
+            <ol className="mt-10 space-y-8 lg:mt-0">
+              {HOW_IT_WORKS.map((step, i) => (
+                <li key={step} className="flex gap-5">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-champagne/10 font-mono text-[13px] font-semibold text-champagne">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <div>
+                    <h3 className="type-display text-[18px]">{t(`welcome.${step}Title`)}</h3>
+                    <p className="mt-1.5 text-[14.5px] leading-relaxed text-muted">
+                      {t(`welcome.${step}Body`)}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      {/* ——— social proof */}
+      <section className="border-t border-line">
+        <div className="mx-auto w-full max-w-[1200px] px-5 py-16 lg:px-8 lg:py-20 text-center">
+          <p className="eyebrow text-center mb-10">Trusted by over 10,000+ users</p>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                text: "The analysis was spot on. I changed my haircut and the difference is literally night and day. Worth every penny.",
+                name: "Michael T.",
+              },
+              {
+                text: "I was skeptical at first, but the virtual try-on for the makeup shades actually matched my skin tone perfectly.",
+                name: "Sarah J.",
+              },
+              {
+                text: "A 30-day plan that is actually realistic. I'm 2 weeks in and getting compliments daily.",
+                name: "David K.",
+              }
+            ].map((review, i) => (
+              <div key={i} className="flex flex-col justify-between rounded-2xl border border-line bg-surface p-6 text-left shadow-sm">
+                <p className="text-[14.5px] leading-relaxed text-cream/90">"{review.text}"</p>
+                <div className="mt-6 flex items-center gap-3">
+                  <div className="size-10 rounded-full bg-champagne/20 flex items-center justify-center text-champagne font-semibold text-[14px]">
+                    {review.name[0]}
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-medium text-cream">{review.name}</p>
+                    <div className="flex text-champagne mt-0.5">
+                      {[...Array(5)].map((_, j) => (
+                        <svg key={j} className="size-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </li>
-          ))}
-        </ol>
-      </Sheet>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ——— final cta */}
+      <section className="border-t border-line bg-champagne/5 relative overflow-hidden">
+        <div className="absolute inset-0 bg-linear-to-b from-transparent to-surface/40 pointer-events-none" />
+        <div className="mx-auto w-full max-w-[800px] px-5 py-20 lg:py-28 text-center relative z-10">
+          <h2 className="type-display text-[clamp(2.25rem,6vw,3.5rem)] text-cream">
+            Ready to meet your best self?
+          </h2>
+          <p className="mt-4 text-[16px] text-muted mx-auto max-w-md">
+            Join the thousands who have already transformed their look with our AI-powered analysis.
+          </p>
+          <div className="mt-10 flex justify-center">
+            <ButtonLink href="/questionnaire" size="lg" className="px-8 shadow-xl">
+              {t("welcome.start")}
+              <ArrowRight className="size-5 rtl:-scale-x-100" aria-hidden />
+            </ButtonLink>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

@@ -84,11 +84,12 @@ export const en = {
     privacy: "Private, never shared, yours to delete.",
     alreadyStarted: "Already started?",
     goToReport: "Go to your report",
-    benefit1: "Ranked by impact — what to do first, not a score.",
-    benefit2: "Specific to you — your cut, brows, beard, shades.",
-    benefit3: "A 30-day plan sized to the time you have.",
+    benefit1: "Personalized analysis for both men and women.",
+    benefit2: "Virtual try-ons for haircuts, makeup, and beard styles.",
+    benefit3: "Ranked by impact — what to do first, not a score.",
+    benefit4: "A 30-day glow-up plan sized to the time you have.",
     mirrorEyebrow: "What you get",
-    mirrorHeading: "Three things a mirror can't give you.",
+    mirrorHeading: "What a mirror can't give you.",
     mirror1Title: "Your next cut, on your face",
     mirror1Body:
       "Cuts, beards and shades are rendered on your own photo. You decide from your face, not from a model who isn't you.",
@@ -98,6 +99,15 @@ export const en = {
     mirror3Title: "Proof you can see",
     mirror3Body:
       "One photo a week, same spot, same light. That's what turns a change you can argue about into one you can see.",
+    mirror4Title: "Virtual makeup try-on",
+    mirror4Body:
+      "See exact shades and makeup styles rendered on your face before you ever buy the products.",
+    mirror5Title: "Personalized skincare",
+    mirror5Body:
+      "A skincare routine built around your actual skin type and concerns, not generic advice.",
+    mirror6Title: "Flawless beard styles",
+    mirror6Body:
+      "Discover which beard style fits your face shape best with our AI-powered visualizer.",
     howDescription: "About two minutes of questions, then it's yours.",
     how1Title: "Eight quick questions",
     how1Body: "What you want, and what a photo can't tell us.",

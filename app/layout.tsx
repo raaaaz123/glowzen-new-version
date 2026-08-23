@@ -6,6 +6,7 @@ import { I18nProvider } from "@/lib/i18n/I18nContext";
 import { LOCALE_META } from "@/lib/i18n/config";
 import { requestLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/translate";
+import { MixpanelProvider } from "@/components/app/MixpanelProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -64,11 +65,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${nunito.variable} h-full antialiased`}
     >
       <body className="theme-sp min-h-full">
-        <I18nProvider initialLocale={locale}>
-          <GlowProvider>
-            <ToastProvider>{children}</ToastProvider>
-          </GlowProvider>
-        </I18nProvider>
+        <MixpanelProvider>
+          <I18nProvider initialLocale={locale}>
+            <GlowProvider>
+              <ToastProvider>{children}</ToastProvider>
+            </GlowProvider>
+          </I18nProvider>
+        </MixpanelProvider>
       </body>
     </html>
   );

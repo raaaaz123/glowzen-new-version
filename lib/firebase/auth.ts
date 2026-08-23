@@ -1,5 +1,6 @@
 import { onAuthStateChanged, signInAnonymously, signOut as fbSignOut } from "firebase/auth";
 import { getFirebaseAuth, isFirebaseEnabled } from "./config";
+import { mixpanelIdentify, mixpanelPeopleSet, mixpanelReset } from "../mixpanel";
 
 export interface SessionUser {
   uid: string;
@@ -41,6 +42,7 @@ export function signInAnonymous(): Promise<SessionUser> {
     if (!auth) return offlineSession();
 
     try {
+      const isNewUser = !auth.currentUser;
       const existing = auth.currentUser ?? (await signInAnonymously(auth)).user;
       const session: SessionUser = {
         uid: existing.uid,
@@ -59,6 +61,21 @@ export function signInAnonymous(): Promise<SessionUser> {
           );
         }
         window.localStorage.setItem(ANON_UID_KEY, session.uid);
+      }
+      
+      mixpanelIdentify(session.uid);
+      mixpanelPeopleSet({
+        $name: session.displayName || "Anonymous User",
+        is_anonymous: session.isAnonymous,
+      });
+
+      if (isNewUser) {
+        import("../mixpanel").then(({ mixpanelTrack }) => {
+          mixpanelTrack("sign_up_completed", {
+            sign_up_method: "anonymous",
+            platform: "web",
+          });
+        });
       }
 
       return session;
@@ -98,18 +115,23 @@ export function onSession(cb: (user: SessionUser | null) => void) {
     cb(offlineSession());
     return () => {};
   }
-  return onAuthStateChanged(auth, (user) =>
-    cb(
-      user
-        ? {
-            uid: user.uid,
-            displayName: user.displayName,
-            isAnonymous: user.isAnonymous,
-            offline: false,
-          }
-        : null,
-    ),
-  );
+  return onAuthStateChanged(auth, (user) => {
+    if (user) {
+      mixpanelIdentify(user.uid);
+      mixpanelPeopleSet({
+        $name: user.displayName || "Anonymous User",
+        is_anonymous: user.isAnonymous,
+      });
+      cb({
+        uid: user.uid,
+        displayName: user.displayName,
+        isAnonymous: user.isAnonymous,
+        offline: false,
+      });
+    } else {
+      cb(null);
+    }
+  });
 }
 
 /**
@@ -125,6 +147,9 @@ export async function signOut(): Promise<void> {
     window.localStorage.removeItem(ANON_UID_KEY);
   }
   const auth = getFirebaseAuth();
-  if (auth && isFirebaseEnabled) await fbSignOut(auth);
+  if (auth && isFirebaseEnabled) {
+    await fbSignOut(auth);
+  }
+  mixpanelReset();
 }
 
