@@ -10,6 +10,8 @@ export interface SessionUser {
 }
 
 const LOCAL_UID_KEY = "glow.localUid";
+/** Persisted anonymous uid so we can detect if Firebase silently assigns a new one. */
+const ANON_UID_KEY = "glow.anonUid";
 
 /**
  * Stable per-browser id used when anonymous auth is unavailable — for example
@@ -40,12 +42,26 @@ export function signInAnonymous(): Promise<SessionUser> {
 
     try {
       const existing = auth.currentUser ?? (await signInAnonymously(auth)).user;
-      return {
+      const session: SessionUser = {
         uid: existing.uid,
         displayName: existing.displayName,
         isAnonymous: existing.isAnonymous,
         offline: false,
       };
+
+      // Persist the anonymous uid so we can detect data-loss scenarios.
+      if (typeof window !== "undefined") {
+        const prev = window.localStorage.getItem(ANON_UID_KEY);
+        if (prev && prev !== session.uid) {
+          console.warn(
+            `[glowzen] Anonymous uid changed from ${prev} to ${session.uid}. ` +
+              "Previous session data may be inaccessible.",
+          );
+        }
+        window.localStorage.setItem(ANON_UID_KEY, session.uid);
+      }
+
+      return session;
     } catch (error) {
       console.warn(
         "[glowzen] Anonymous sign-in failed — falling back to a local id. " +
@@ -96,8 +112,19 @@ export function onSession(cb: (user: SessionUser | null) => void) {
   );
 }
 
+/**
+ * Signs the anonymous user out of Firebase Auth.
+ *
+ * ⚠️  For anonymous auth this destroys the only link to the user's data.
+ *     Only call this from `deleteAccount()` — never expose it as a UI action.
+ */
 export async function signOut(): Promise<void> {
   cached = null;
+  // Clear persisted uid so the next session doesn't warn about a mismatch.
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(ANON_UID_KEY);
+  }
   const auth = getFirebaseAuth();
   if (auth && isFirebaseEnabled) await fbSignOut(auth);
 }
+

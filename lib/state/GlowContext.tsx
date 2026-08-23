@@ -12,6 +12,7 @@ import {
 import { dateKey } from "@/lib/streak";
 import { initAnalytics } from "@/lib/firebase/config";
 import { getUserDoc } from "@/services/userService";
+import { normalizeAnswers } from "@/lib/data/questions";
 import { getPhotoUrl } from "@/lib/storage/photos";
 import type { Gender, QuestionnaireAnswers } from "@/lib/types";
 
@@ -19,7 +20,7 @@ const STORAGE_KEY = "glow.session.v1";
 
 const EMPTY_ANSWERS: QuestionnaireAnswers = {
   gender: null,
-  ageRange: null,
+  age: null,
   focus: null,
   aesthetic: null,
   concern: null,
@@ -110,7 +111,7 @@ export function GlowProvider({ children }: { children: ReactNode }) {
         setState((prev) => ({
           ...prev,
           ...parsed,
-          answers: { ...EMPTY_ANSWERS, ...parsed.answers },
+          answers: { ...EMPTY_ANSWERS, ...normalizeAnswers(parsed.answers) },
           habitLog: parsed.habitLog ?? {},
         }));
       }
@@ -134,7 +135,7 @@ export function GlowProvider({ children }: { children: ReactNode }) {
 
       setState((prev) => ({
         ...prev,
-        answers: { ...prev.answers, ...remote.answers },
+        answers: { ...prev.answers, ...remote.answers, age: remote.answers.age ?? prev.answers.age },
         savedStyleId: remote.savedStyleId ?? prev.savedStyleId,
         photoKey: remote.photoKey ?? prev.photoKey,
         subscription: remote.subscription ?? prev.subscription,

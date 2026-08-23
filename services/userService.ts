@@ -2,6 +2,7 @@ import { currentUid, signOut } from "@/lib/firebase/auth";
 import { paths, readDoc, removeCollection, removeDoc, writeDoc } from "@/lib/firebase/firestore";
 import { deletePhotos } from "@/lib/storage/photos";
 import { coerceLocale, type Locale } from "@/lib/i18n/config";
+import { normalizeAnswers } from "@/lib/data/questions";
 import type { Gender, QuestionnaireAnswers, UserProfile } from "@/lib/types";
 import type { SubscriptionState } from "@/lib/state/GlowContext";
 
@@ -34,7 +35,12 @@ export async function getUserDoc(): Promise<UserDoc> {
   const stored = await readDoc<UserDoc>(paths.user(uid), EMPTY_DOC);
   // A document written before locales existed, or one carrying a code we have
   // since dropped, must not put an unknown key in front of the translator.
-  return { ...stored, locale: stored.locale ? coerceLocale(stored.locale) : null };
+  return {
+    ...stored,
+    // Documents written before ages were exact still carry a bucket.
+    answers: normalizeAnswers(stored.answers),
+    locale: stored.locale ? coerceLocale(stored.locale) : null,
+  };
 }
 
 /** Only what the user actually told us. Nothing is filled in for them. */
@@ -42,7 +48,7 @@ export async function getProfile(gender: Gender | null): Promise<UserProfile> {
   const stored = await getUserDoc();
   return {
     gender: gender ?? stored.answers.gender ?? null,
-    ageRange: stored.answers.ageRange ?? null,
+    age: stored.answers.age ?? null,
     aesthetic: stored.answers.aesthetic ?? null,
     goal: stored.answers.priority ?? null,
     concern: stored.answers.concern ?? null,

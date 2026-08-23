@@ -1,4 +1,4 @@
-import type { AgeRange, Choice, ChoiceDef, Gender } from "@/lib/types";
+import type { Choice, ChoiceDef, Gender, QuestionnaireAnswers } from "@/lib/types";
 import type { Vars } from "@/lib/i18n/translate";
 
 /**
@@ -19,13 +19,43 @@ export const GENDER_CHOICES: ChoiceDef[] = [
   { id: "neutral", key: "neutral", hint: true },
 ];
 
-export const AGE_CHOICES: { id: AgeRange; key: string }[] = [
-  { id: "under-18", key: "under-18" },
-  { id: "18-24", key: "18-24" },
-  { id: "25-34", key: "25-34" },
-  { id: "35-44", key: "35-44" },
-  { id: "45-plus", key: "45-plus" },
-];
+/**
+ * Age is asked for exactly, in years, rather than as a bucket — a 19-year-old
+ * and a 24-year-old want different things from the same "18-24" band, and the
+ * model reads the number straight.
+ */
+export const AGE_MIN = 13;
+export const AGE_MAX = 90;
+export const AGE_DEFAULT = 24;
+
+export const clampAge = (value: number) =>
+  Math.min(AGE_MAX, Math.max(AGE_MIN, Math.round(value)));
+
+/** The buckets we used to store, mapped to the middle of each band. */
+const LEGACY_AGE: Record<string, number> = {
+  "under-18": 17,
+  "18-24": 21,
+  "25-34": 29,
+  "35-44": 39,
+  "45-plus": 50,
+};
+
+/**
+ * Answers as stored may predate exact ages — either in Firestore or in a
+ * browser that cached the old shape. Read the old field once, then let it go.
+ */
+export function normalizeAnswers(
+  stored: Partial<QuestionnaireAnswers> & { ageRange?: unknown } = {},
+): Partial<QuestionnaireAnswers> {
+  const { ageRange, ...rest } = stored;
+  if (typeof rest.age === "number" && Number.isFinite(rest.age)) {
+    return { ...rest, age: clampAge(rest.age) };
+  }
+  if (typeof ageRange === "string" && ageRange in LEGACY_AGE) {
+    return { ...rest, age: LEGACY_AGE[ageRange] };
+  }
+  return { ...rest, age: null };
+}
 
 type ChoiceSet = Record<Gender, ChoiceDef[]>;
 
@@ -172,7 +202,6 @@ export const PRIORITY_CHOICES: ChoiceDef[] = [
 /** Which dictionary branch a list's keys sit under. */
 export type ChoiceCategory =
   | "gender"
-  | "age"
   | "focus"
   | "aesthetic"
   | "concern"

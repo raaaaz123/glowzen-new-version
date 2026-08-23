@@ -4,14 +4,19 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   Bell,
+  Check,
   ChevronRight,
+  CreditCard,
+  Crown,
   FileText,
   ImageOff,
   Lock,
   Pencil,
   ShieldCheck,
+  Sparkles,
   Trash2,
   User,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -21,11 +26,11 @@ import { Sheet } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { TopBar } from "@/components/app/TopBar";
 import { LanguageRow } from "@/components/app/LanguagePicker";
+import { Paywall } from "@/components/app/Paywall";
 import { useGlow } from "@/lib/state/GlowContext";
-import { useT } from "@/lib/i18n/I18nContext";
+import { useI18n } from "@/lib/i18n/I18nContext";
 import {
   AESTHETIC_CHOICES,
-  AGE_CHOICES,
   CONCERN_CHOICES,
   DAILY_MINUTES_CHOICES,
   FOCUS_CHOICES,
@@ -44,11 +49,12 @@ type Confirm = "photos" | "account" | null;
 export default function ProfilePage() {
   const router = useRouter();
   const toast = useToast();
-  const t = useT();
-  const { answers, gender, photoUrl, setPhotoUrl, reset } = useGlow();
+  const { t, shortDate, formatNumber } = useI18n();
+  const { answers, gender, photoUrl, setPhotoUrl, reset, subscription, isSubscribed } = useGlow();
   const [privatePhotos, setPrivatePhotos] = useState(true);
   const [notifications, setNotifications] = useState(true);
   const [confirm, setConfirm] = useState<Confirm>(null);
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const g = gender ?? "neutral";
@@ -128,6 +134,14 @@ export default function ProfilePage() {
     }
   }
 
+  const getPlanTitle = () => {
+    if (!isSubscribed) return t("profile.planFree");
+    if (subscription?.plan === "trial") return t("profile.planTrial");
+    if (subscription?.plan === "monthly") return t("profile.planMonthly");
+    if (subscription?.plan === "yearly") return t("profile.planYearly");
+    return t("profile.planActive");
+  };
+
   return (
     <main>
       <TopBar back={false} title={t("profile.title")} />
@@ -153,15 +167,117 @@ export default function ProfilePage() {
               : t("profile.yourProfile")}
           </h1>
           <p className="mt-0.5 text-[13.5px] text-champagne">
-            {answers.ageRange ? `${labelFor(t, "age", AGE_CHOICES, answers.ageRange)} · ` : ""}
-            {/* Capitalising `g` in place only ever worked because the values are
-                English words. The dictionary carries all three properly. */}
+            {answers.age ? `${t("common.ageYears", { value: formatNumber(answers.age) })} · ` : ""}
             {g === "neutral"
               ? t("profile.neutralRecommendations")
               : t(`profile.genderLabel.${g}`)}
           </p>
         </div>
       </Card>
+
+      {/* Subscription Details Card */}
+      <section className="mt-8">
+        <SectionHeader
+          eyebrow={t("profile.membershipEyebrow")}
+          title={t("profile.membershipTitle")}
+        />
+
+        <Card className="relative overflow-hidden p-5">
+          {isSubscribed && (
+            <div className="pointer-events-none absolute -top-12 -end-12 size-36 rounded-full bg-champagne/10 blur-2xl" />
+          )}
+
+          <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div
+                className={cn(
+                  "grid size-11 shrink-0 place-items-center rounded-xl border transition-colors",
+                  isSubscribed
+                    ? "border-champagne/40 bg-champagne/10 text-champagne shadow-[0_0_15px_rgba(224,188,140,0.15)]"
+                    : "border-line bg-raised text-muted",
+                )}
+              >
+                {isSubscribed ? <Crown className="size-5 text-champagne" /> : <Sparkles className="size-5 text-muted" />}
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="type-title text-[16px] text-cream font-medium">
+                    {getPlanTitle()}
+                  </h3>
+
+                  <span
+                    className={cn(
+                      "rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wider uppercase",
+                      isSubscribed
+                        ? "bg-champagne/20 text-champagne border border-champagne/40"
+                        : "bg-surface text-muted border border-line",
+                    )}
+                  >
+                    {isSubscribed ? t("profile.statusActive") : t("profile.statusFree")}
+                  </span>
+                </div>
+
+                <p className="mt-1 text-[13px] leading-relaxed text-muted">
+                  {isSubscribed
+                    ? subscription?.expiresAt
+                      ? t("profile.renewsOn", { date: shortDate(subscription.expiresAt) })
+                      : t("profile.activeUnlimited")
+                    : t("profile.freeAccessBody")}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-1 sm:mt-0 shrink-0">
+              <Button
+                variant={isSubscribed ? "secondary" : "primary"}
+                size="sm"
+                onClick={() => setPaywallOpen(true)}
+                className="w-full sm:w-auto"
+              >
+                {isSubscribed ? (
+                  <>
+                    <CreditCard className="size-4" />
+                    {t("profile.managePlan")}
+                  </>
+                ) : (
+                  <>
+                    <Zap className="size-4" />
+                    {t("profile.upgradeNow")}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-line/60 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-[12.5px] text-muted">
+            <div className="flex items-center gap-2">
+              <Check className={cn("size-3.5 shrink-0", isSubscribed ? "text-champagne" : "text-faint")} />
+              <span className={cn(isSubscribed ? "text-cream/90" : "text-muted")}>
+                {t("profile.featureAiAnalysis")}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Check className={cn("size-3.5 shrink-0", isSubscribed ? "text-champagne" : "text-faint")} />
+              <span className={cn(isSubscribed ? "text-cream/90" : "text-muted")}>
+                {t("profile.featureCustomPlan")}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Check className={cn("size-3.5 shrink-0", isSubscribed ? "text-champagne" : "text-faint")} />
+              <span className={cn(isSubscribed ? "text-cream/90" : "text-muted")}>
+                {t("profile.featureStylesBeard")}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Check className={cn("size-3.5 shrink-0", isSubscribed ? "text-champagne" : "text-faint")} />
+              <span className={cn(isSubscribed ? "text-cream/90" : "text-muted")}>
+                {t("profile.featureUnlimitedRescans")}
+              </span>
+            </div>
+          </div>
+        </Card>
+      </section>
 
       <section className="mt-8">
         <SectionHeader
@@ -274,6 +390,14 @@ export default function ProfilePage() {
           </div>
         }
       >
+        {confirm === "account" && isSubscribed && (
+          <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-danger/30 bg-danger/8 px-4 py-3">
+            <Crown className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden />
+            <p className="text-[13px] font-medium leading-snug text-danger-soft">
+              {t("profile.subscriptionLossWarning")}
+            </p>
+          </div>
+        )}
         <p className="pb-2 text-[13.5px] leading-relaxed text-muted">
           {t(
             confirm === "account"
@@ -282,6 +406,8 @@ export default function ProfilePage() {
           )}
         </p>
       </Sheet>
+
+      <Paywall open={paywallOpen} onClose={() => setPaywallOpen(false)} />
     </main>
   );
 }

@@ -127,8 +127,40 @@ export default function HomePage() {
 
   return (
     <main className="animate-view pb-2">
+      {/* ——— Glowzen branding */}
+      <div className="safe-t flex items-center justify-between pt-1 pb-3 mb-2 border-b border-graygreen/20">
+        <Link
+          href="/"
+          aria-label={t("common.appName")}
+          className="group flex items-center gap-2.5 transition-opacity hover:opacity-90"
+        >
+          <span className="grid size-8 place-items-center rounded-xl bg-linear-to-b from-champagne-hi to-champagne text-[13px] font-bold text-on-accent shadow-xs transition-transform duration-200 group-hover:scale-105">
+            G
+          </span>
+          <span className="type-display text-xl font-bold tracking-tight text-charcoal transition-colors group-hover:text-violet">
+            {t("common.appName")}
+          </span>
+        </Link>
+
+        <Link href="/profile" aria-label={t("nav.profile")} className="shrink-0">
+          {photoUrl ? (
+            <ImageFrame
+              src={photoUrl}
+              alt=""
+              ratio="aspect-square"
+              className="size-10 rounded-[1rem] border border-graygreen/60"
+              imgClassName="object-[center_20%]"
+            />
+          ) : (
+            <span className="grid size-10 place-items-center rounded-[1rem] border border-graygreen/60 bg-white text-charcoal/50 shadow-soft">
+              <User className="size-4" aria-hidden />
+            </span>
+          )}
+        </Link>
+      </div>
+
       {/* ——— greeting */}
-      <header className="safe-t flex items-center justify-between gap-3 pb-1 sm:gap-4">
+      <header className="flex items-center justify-between gap-3 pb-1 sm:gap-4">
         <div className="min-w-0">
           <h1 className="text-[clamp(2rem,8.5vw,2.5rem)] leading-[1.04] font-black tracking-[-0.022em]">
             {hour === null ? t("home.welcomeBack") : t(greetingKey(hour))}
@@ -141,21 +173,6 @@ export default function HomePage() {
             </p>
           )}
         </div>
-        <Link href="/profile" aria-label={t("nav.profile")} className="shrink-0">
-          {photoUrl ? (
-            <ImageFrame
-              src={photoUrl}
-              alt=""
-              ratio="aspect-square"
-              className="size-12 rounded-[1.25rem] border border-graygreen/60"
-              imgClassName="object-[center_20%]"
-            />
-          ) : (
-            <span className="grid size-12 place-items-center rounded-[1.25rem] border border-graygreen/60 bg-white text-charcoal/50 shadow-soft">
-              <User className="size-5" aria-hidden />
-            </span>
-          )}
-        </Link>
       </header>
 
       {analysis.empty && (

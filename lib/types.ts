@@ -2,8 +2,6 @@
 
 export type Gender = "male" | "female" | "neutral";
 
-export type AgeRange = "under-18" | "18-24" | "25-34" | "35-44" | "45-plus";
-
 export type FocusArea =
   | "full"
   | "face"
@@ -35,7 +33,8 @@ export interface ChoiceDef {
 
 export interface QuestionnaireAnswers {
   gender: Gender | null;
-  ageRange: AgeRange | null;
+  /** Exact age in years, not a bucket. Null until they set it. */
+  age: number | null;
   focus: string | null;
   aesthetic: string | null;
   concern: string | null;
@@ -57,7 +56,7 @@ export interface QuestionnaireAnswers {
  */
 export interface UserProfile {
   gender: Gender | null;
-  ageRange: AgeRange | null;
+  age: number | null;
   aesthetic: string | null;
   goal: string | null;
   concern: string | null;

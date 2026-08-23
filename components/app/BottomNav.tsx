@@ -70,11 +70,11 @@ export function SideRail() {
   return (
     <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col justify-between border-e border-line py-8 pe-6 lg:flex">
       <div>
-        <Link href="/home" className="mb-10 flex items-center gap-2.5 px-3">
-          <span className="grid size-8 place-items-center rounded-xl bg-linear-to-b from-champagne-hi to-champagne text-[13px] font-semibold text-on-accent">
+        <Link href="/" className="mb-10 flex items-center gap-2.5 px-3 group">
+          <span className="grid size-8 place-items-center rounded-xl bg-linear-to-b from-champagne-hi to-champagne text-[13px] font-semibold text-on-accent transition-transform duration-200 group-hover:scale-105">
             G
           </span>
-          <span className="type-display text-xl">{t("common.appName")}</span>
+          <span className="type-display text-xl transition-colors group-hover:text-champagne">{t("common.appName")}</span>
         </Link>
 
         <nav aria-label={t("nav.main")}>

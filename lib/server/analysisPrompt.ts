@@ -412,7 +412,7 @@ export function buildPrompt(
     "Here is the person's photo and what they told us.",
     "",
     `Presents as: ${label(answers.gender, "not stated")}`,
-    `Age range: ${label(answers.ageRange, "not stated")}`,
+    `Age: ${answers.age ? `${answers.age}` : "not stated"}`,
     `Wants to improve: ${label(answers.focus, "everything")}`,
     `Target aesthetic: ${label(answers.aesthetic, "not stated")}`,
     `What bothers them most: ${label(answers.concern, "not stated")}`,

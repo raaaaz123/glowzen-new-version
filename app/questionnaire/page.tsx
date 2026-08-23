@@ -2,14 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, ChevronLeft, Sparkles } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, Mars, NonBinary, Sparkles, Venus } from "lucide-react";
+import { AgeSlider } from "@/components/ui/AgeSlider";
 import { Button } from "@/components/ui/Button";
 import { OptionCard, OptionChip } from "@/components/ui/OptionCard";
 import { StepBar } from "@/components/ui/StepBar";
 import { useToast } from "@/components/ui/Toast";
 import {
   AESTHETIC_CHOICES,
-  AGE_CHOICES,
   COMMITMENT_CHOICES,
   CONCERN_CHOICES,
   DAILY_MINUTES_CHOICES,
@@ -26,13 +26,13 @@ import {
 import { useGlow } from "@/lib/state/GlowContext";
 import { useT } from "@/lib/i18n/I18nContext";
 import { saveAnswers } from "@/services/userService";
-import type { AgeRange, Gender, QuestionnaireAnswers } from "@/lib/types";
+import type { Gender, QuestionnaireAnswers } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const TOTAL = 8;
 
-/** Steps that move on by themselves once they're answered. */
-const AUTO_ADVANCE = new Set([1, 2, 3, 4, 5, 7]);
+/** Steps that move on by themselves. Empty so users only go next by clicking Continue. */
+const AUTO_ADVANCE = new Set<number>();
 
 /** Shown once a step is answered — the app reacting rather than just recording. */
 const reactionKey = (step: number) => `questionnaire.reaction${step}`;
@@ -54,7 +54,6 @@ export default function QuestionnairePage() {
   const choices = useMemo(
     () => ({
       gender: resolveChoices(t, "gender", GENDER_CHOICES),
-      age: resolveChoices(t, "age", AGE_CHOICES),
       focus: resolveChoices(t, "focus", FOCUS_CHOICES[gender]),
       aesthetic: resolveChoices(t, "aesthetic", AESTHETIC_CHOICES[gender]),
       concern: resolveChoices(t, "concern", CONCERN_CHOICES[gender]),
@@ -77,7 +76,7 @@ export default function QuestionnairePage() {
   const canContinue = useMemo(() => {
     switch (step) {
       case 1:
-        return Boolean(answers.gender && answers.ageRange);
+        return Boolean(answers.gender && answers.age !== null);
       case 2:
         return Boolean(answers.focus);
       case 3:
@@ -176,30 +175,14 @@ export default function QuestionnairePage() {
           {step === 1 && (
             <Step title={t("questionnaire.step1Title")} subtitle={t("questionnaire.step1Subtitle")}>
               <Field legend={t("questionnaire.step1LegendGender")}>
-                <div className="space-y-2.5">
-                  {choices.gender.map((c) => (
-                    <OptionCard
-                      key={c.id}
-                      label={c.label}
-                      hint={c.hint}
-                      compact
-                      selected={answers.gender === c.id}
-                      onSelect={() => pick("gender", c.id as Gender)}
-                    />
-                  ))}
-                </div>
+                <GenderCards
+                  choices={choices.gender}
+                  value={answers.gender}
+                  onChange={(id) => pick("gender", id)}
+                />
               </Field>
               <Field legend={t("questionnaire.step1LegendAge")} className="mt-7">
-                <Chips>
-                  {choices.age.map((c) => (
-                    <OptionChip
-                      key={c.id}
-                      label={c.label}
-                      selected={answers.ageRange === c.id}
-                      onSelect={() => pick("ageRange", c.id as AgeRange)}
-                    />
-                  ))}
-                </Chips>
+                <AgeSlider value={answers.age} onChange={(age) => pick("age", age)} />
               </Field>
             </Step>
           )}
@@ -297,13 +280,12 @@ export default function QuestionnairePage() {
                 className="mt-7"
                 count={`${answers.skinConcerns.length}/${MAX_SKIN_CONCERNS}`}
               >
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 gap-3">
                   {choices.skinConcern.map((c) => (
-                    <OptionCard
+                    <SkinConcernCard
                       key={c.id}
                       label={c.label}
-                      compact
-                      multi
+                      image={SKIN_CONCERN_IMAGES[c.id]}
                       selected={answers.skinConcerns.includes(c.id)}
                       disabled={concernsFull && c.id !== "none"}
                       onSelect={() => toggleConcern(c.id)}
@@ -444,5 +426,165 @@ function List({
         />
       ))}
     </div>
+  );
+}
+
+function GenderCards({
+  choices,
+  value,
+  onChange,
+}: {
+  choices: { id: string; label: string; hint?: string }[];
+  value: string | null;
+  onChange: (id: Gender) => void;
+}) {
+  const icons: Record<string, typeof Mars> = {
+    male: Mars,
+    female: Venus,
+    neutral: NonBinary,
+  };
+
+  return (
+    <div className="grid grid-cols-3 gap-2 sm:gap-3">
+      {choices.map((c) => {
+        const selected = value === c.id;
+        const Icon = icons[c.id] ?? NonBinary;
+        return (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => onChange(c.id as Gender)}
+            aria-pressed={selected}
+            className={cn(
+              "group relative flex flex-col items-center rounded-2xl border px-2 py-4 text-center transition-[border-color,background-color,transform] duration-200 sm:px-3 sm:py-5",
+              selected
+                ? "animate-pop border-champagne/60 bg-champagne/8"
+                : "border-line bg-surface hover:border-cream/25 active:scale-[.98]",
+            )}
+          >
+            {selected && (
+              <span className="absolute top-2 end-2 grid size-4.5 place-items-center rounded-full bg-champagne text-on-accent">
+                <Check className="animate-tick size-3" strokeWidth={3} />
+              </span>
+            )}
+
+            <span
+              className={cn(
+                "grid size-11 place-items-center rounded-2xl transition-colors duration-200 sm:size-12",
+                selected
+                  ? "bg-champagne text-on-accent"
+                  : "bg-raised text-muted group-hover:text-cream",
+              )}
+            >
+              <Icon className="size-5 sm:size-6" strokeWidth={1.9} />
+            </span>
+
+            <span
+              className={cn(
+                "mt-2.5 text-[13px] font-medium tracking-[-0.01em] sm:text-[15px]",
+                selected ? "text-cream" : "text-cream/90",
+              )}
+            >
+              {c.label}
+            </span>
+
+            {c.hint && (
+              <span className="mt-1 hidden text-[12px] leading-snug text-muted sm:block">
+                {c.hint}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const SKIN_CONCERN_IMAGES: Record<string, string> = {
+  redness:
+    "https://cascadeeyeskin.com/wp-content/uploads/2025/07/Redness-on-Face-Causes-and-Ways-to-Reduce-It-1.jpg",
+  "dark-circles":
+    "https://drgracekelly.co.uk/wp-content/smush-webp/2022/09/dr-grace-kelly-your-conditions-face-dark-circles.jpg.webp",
+  dryness:
+    "https://cdn.shopify.com/s/files/1/0578/2480/5033/files/8_jpg.jpg?v=1773405924",
+  oiliness:
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQUVM0fk41mT9VwxKs9Z2XiQwgFEwEP58usRVx-tvUNW9tuvVBeAHZ4a1A&s=10",
+  breakouts:
+    "https://images.squarespace-cdn.com/content/v1/5580db58e4b0695ecee71d14/1779296579806-P7JUM2HM2FFMHO38NEUX/acne.png",
+  texture:
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_qJX0tsGluIFrHK2yPHLmK4MuzP5lFX5x7rWdgyRV5w&s=10",
+  dullness:
+    "https://luxaestheticclinic.com/wp-content/uploads/dull-skin.png",
+};
+
+function SkinConcernCard({
+  label,
+  image,
+  selected,
+  disabled,
+  onSelect,
+}: {
+  label: string;
+  image?: string;
+  selected: boolean;
+  disabled?: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={disabled && !selected}
+      aria-pressed={selected}
+      className={cn(
+        "group relative flex flex-col overflow-hidden rounded-2xl border text-left transition-all duration-200 cursor-pointer select-none",
+        selected
+          ? "border-champagne bg-champagne/15 ring-1 ring-champagne/40 shadow-[0_0_20px_rgba(224,188,140,0.18)]"
+          : "border-line bg-surface hover:border-line-hi hover:bg-raised",
+        disabled && !selected && "pointer-events-none opacity-35",
+      )}
+    >
+      <div className="absolute top-2.5 right-2.5 z-10">
+        <span
+          className={cn(
+            "grid size-5.5 place-items-center rounded-lg border transition-all duration-200",
+            selected
+              ? "border-champagne bg-champagne text-on-accent shadow-xs"
+              : "border-cream/30 bg-black/40 backdrop-blur-xs group-hover:border-cream/50",
+          )}
+        >
+          {selected && <Check className="size-3.5" strokeWidth={3} />}
+        </span>
+      </div>
+
+      {image ? (
+        <div className="relative h-24 sm:h-28 w-full overflow-hidden bg-black/40">
+          <img
+            src={image}
+            alt={label}
+            className={cn(
+              "h-full w-full object-cover transition-transform duration-300 group-hover:scale-105",
+              selected ? "brightness-105" : "brightness-90 opacity-90",
+            )}
+          />
+          <div className="absolute inset-0 bg-linear-to-t from-ink via-ink/30 to-transparent" />
+        </div>
+      ) : (
+        <div className="relative h-24 sm:h-28 w-full bg-raised flex items-center justify-center">
+          <Sparkles className="size-6 text-muted/60" />
+        </div>
+      )}
+
+      <div className="p-3">
+        <span
+          className={cn(
+            "block text-[13.5px] sm:text-[14.5px] font-bold tracking-tight leading-snug",
+            selected ? "text-cream" : "text-cream/90",
+          )}
+        >
+          {label}
+        </span>
+      </div>
+    </button>
   );
 }
