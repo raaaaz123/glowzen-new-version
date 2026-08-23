@@ -22,7 +22,7 @@ import {
  * Every branch writes the whole subscription object, so events arriving out
  * of order settle on the same state either way.
  */
-export const POST = Webhooks({
+const handler = Webhooks({
   webhookSecret: process.env.POLAR_WEBHOOK_SECRET!,
   onPayload: async (payload) => {
     switch (payload.type) {
@@ -124,3 +124,12 @@ export const POST = Webhooks({
     }
   },
 });
+
+export const POST = async (req: Request) => {
+  try {
+    return await handler(req);
+  } catch (error) {
+    console.error("[webhook] FATAL ERROR:", error);
+    throw error;
+  }
+};
