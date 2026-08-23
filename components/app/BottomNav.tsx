@@ -21,7 +21,10 @@ function useActive() {
 
 export function BottomNav() {
   const isActive = useActive();
+  const pathname = usePathname();
   const t = useT();
+
+  if (pathname === "/results/preview") return null;
 
   return (
     <nav
@@ -65,7 +68,10 @@ export function BottomNav() {
 
 export function SideRail() {
   const isActive = useActive();
+  const pathname = usePathname();
   const t = useT();
+
+  if (pathname === "/results/preview") return null;
 
   return (
     <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col justify-between border-e border-line py-8 pe-6 lg:flex">
