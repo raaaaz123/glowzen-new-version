@@ -27,7 +27,7 @@ type PlanKey = "trial" | "monthly" | "yearly" | "yearlyExit";
  * seven chances to quote a price the checkout won't honour. Only the wording
  * around them ("/month", "Save 64%") is translated.
  */
-const PRICE = {
+export const PRICE = {
   trial: "$0.99",
   trialPerDay: "$0.33",
   monthly: "$6.99",
@@ -41,8 +41,8 @@ const PRICE = {
 const TRIAL_DAYS = 3;
 const YEARLY_SAVING = 64;
 const EXIT_SAVING = 76;
-const RATING = 4.9;
-const REVIEWS = 2847;
+export const RATING = 4.9;
+export const REVIEWS = 2847;
 
 interface PlanDef {
   key: PlanKey;

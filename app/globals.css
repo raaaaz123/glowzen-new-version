@@ -215,6 +215,14 @@
     transform: none;
   }
 }
+@keyframes story-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
 @keyframes sweep {
   0% {
     transform: translateY(-110%);
@@ -244,6 +252,11 @@
 }
 @utility animate-halo {
   animation: halo 3.2s ease-in-out infinite;
+}
+/* The segmented story bar on the results teaser. The duration is set per
+   instance so the bar and the slide timer can never drift apart. */
+@utility animate-story {
+  animation: story-fill var(--story-dur, 4s) linear both;
 }
 @utility animate-sweep {
   animation: sweep 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
