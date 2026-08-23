@@ -1116,8 +1116,8 @@ export default function ResultsPreviewPage() {
         </aside>
       </div>
 
-      {/* ── phone: the offer sits above the tab bar, never behind it ─── */}
-      <div className="sticky bottom-[var(--sticky-offset,0px)] z-40 -mx-5 mt-8 border-t border-line bg-linear-to-t from-ink via-ink to-ink/85 px-5 pt-3.5 pb-3.5 backdrop-blur-xl lg:hidden">
+      {/* ── phone: the offer sits at the very bottom, never behind it ─── */}
+      <div className="safe-b sticky bottom-0 z-40 -mx-5 mt-8 border-t border-line bg-linear-to-t from-ink via-ink to-ink/85 px-5 pt-3.5 pb-3.5 backdrop-blur-xl lg:hidden">
         <Button fullWidth onClick={openPaywall}>
           <Crown className="size-4" aria-hidden />
           {t("teaser.cta")}

@@ -117,3 +117,18 @@ export function SideRail() {
     </aside>
   );
 }
+
+export function MainContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isPreview = pathname === "/results/preview";
+  return (
+    <div
+      className={cn(
+        "min-w-0 flex-1",
+        !isPreview && "pb-28 [--sticky-offset:5.25rem] lg:pb-16 lg:[--sticky-offset:0px]"
+      )}
+    >
+      <div className="shell px-5 lg:max-w-none lg:px-0">{children}</div>
+    </div>
+  );
+}
