@@ -34,14 +34,21 @@ function serviceAccount(): Record<string, unknown> | null {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim();
   if (!raw) return null;
 
-  // A hosting dashboard stores the value exactly as typed, so a JSON blob
-  // pasted with quotes around it arrives with the quotes attached and parses
-  // as nothing at all. Forgiving that is one line; the alternative is a dead
-  // payment path and an error that points at the wrong thing.
-  const quoted =
-    (raw.startsWith('"') && raw.endsWith('"')) ||
-    (raw.startsWith("'") && raw.endsWith("'"));
-  const body = quoted ? raw.slice(1, -1) : raw;
+  // Some environments (Vercel) mangle JSON with newlines. A base64 encoded
+  // string bypasses all quote and newline escaping issues.
+  let body = raw;
+  if (body.startsWith('"') && body.endsWith('"') || body.startsWith("'") && body.endsWith("'")) {
+    body = body.slice(1, -1);
+  }
+  
+  // If it doesn't start with { but is a valid base64 string, decode it.
+  if (!body.trim().startsWith("{")) {
+    try {
+      body = Buffer.from(body, "base64").toString("utf-8");
+    } catch {
+      // ignore, let JSON.parse fail with a descriptive error
+    }
+  }
 
   let parsed: Record<string, unknown>;
   try {

@@ -1,3 +1,4 @@
+import { NextRequest } from "next/server";
 import { Webhooks } from "@polar-sh/nextjs";
 import { resolvePlan } from "@/lib/polar";
 import {
@@ -125,7 +126,7 @@ const handler = Webhooks({
   },
 });
 
-export const POST = async (req: Request) => {
+export const POST = async (req: NextRequest) => {
   try {
     return await handler(req);
   } catch (error) {
