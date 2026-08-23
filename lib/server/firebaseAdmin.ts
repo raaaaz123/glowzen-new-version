@@ -31,15 +31,25 @@ let _db: Firestore | null = null;
  * credentials — a webhook that half-works is worse than one that reports why.
  */
 function serviceAccount(): Record<string, unknown> | null {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim();
   if (!raw) return null;
+
+  // A hosting dashboard stores the value exactly as typed, so a JSON blob
+  // pasted with quotes around it arrives with the quotes attached and parses
+  // as nothing at all. Forgiving that is one line; the alternative is a dead
+  // payment path and an error that points at the wrong thing.
+  const quoted =
+    (raw.startsWith('"') && raw.endsWith('"')) ||
+    (raw.startsWith("'") && raw.endsWith("'"));
+  const body = quoted ? raw.slice(1, -1) : raw;
 
   let parsed: Record<string, unknown>;
   try {
-    parsed = JSON.parse(raw) as Record<string, unknown>;
+    parsed = JSON.parse(body) as Record<string, unknown>;
   } catch (error) {
     throw new Error(
-      `FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON: ${(error as Error).message}`,
+      "FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON — it should be the whole " +
+        `service account file, starting with { and ending with }: ${(error as Error).message}`,
     );
   }
 
