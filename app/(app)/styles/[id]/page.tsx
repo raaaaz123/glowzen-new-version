@@ -15,14 +15,16 @@ import { PreviewPending } from "@/components/glow/PreviewPending";
 import { useAsync } from "@/lib/useAsync";
 import { useGlow } from "@/lib/state/GlowContext";
 import { cachedPreview, getHairstyle, saveStyle } from "@/services/transformationService";
+import { useT } from "@/lib/i18n/I18nContext";
 import { stylistWord } from "@/lib/copy";
 
 export default function StyleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const toast = useToast();
+  const t = useT();
   const { gender, photoUrl, photoKey, savedStyleId, setSavedStyleId } = useGlow();
-  const stylist = stylistWord(gender);
+  const stylist = stylistWord(t, gender);
   const { data, loading, error, empty, reload } = useAsync(() => getHairstyle(gender, id), [gender, id]);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -48,9 +50,9 @@ export default function StyleDetailPage() {
     try {
       await saveStyle(data.id);
       setSavedStyleId(data.id);
-      toast(`${data.name} saved to your plan.`);
+      toast(t("styles.savedToast", { name: data.name }));
     } catch {
-      toast("We couldn't save that style. Try again.", "error");
+      toast(t("styles.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -61,20 +63,20 @@ export default function StyleDetailPage() {
     try {
       await navigator.clipboard.writeText(`${data.name} — ${data.barberNotes}`);
       setCopied(true);
-      toast("Copied. Show it at the chair.");
+      toast(t("common.copiedForChair"));
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      toast("Copying isn't available here. Screenshot it instead.", "info");
+      toast(t("common.copyUnavailable"), "info");
     }
   }
 
   return (
     <main>
-      <TopBar title={data?.name ?? "Style"} />
+      <TopBar title={data?.name ?? t("styleDetail.fallbackTitle")} />
 
       {empty && (
         <div className="mt-8">
-          <NothingYet empty={empty} title="That style needs a scan" />
+          <NothingYet empty={empty} title={t("styleDetail.emptyTitle")} />
         </div>
       )}
 
@@ -96,9 +98,13 @@ export default function StyleDetailPage() {
         <div className="mt-10">
           <EmptyState
             icon={Scissors}
-            title="That style isn't in your matches"
-            body="It may have been replaced after a newer analysis."
-            action={<ButtonLink href="/styles" size="md">Back to your matches</ButtonLink>}
+            title={t("styleDetail.notInMatches")}
+            body={t("styleDetail.notInMatchesBody")}
+            action={
+              <ButtonLink href="/styles" size="md">
+                {t("styleDetail.backToMatches")}
+              </ButtonLink>
+            }
           />
         </div>
       )}
@@ -118,7 +124,7 @@ export default function StyleDetailPage() {
             )}
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="rounded-full border border-champagne/25 bg-champagne/10 px-3 py-1 font-mono text-[11px] text-champagne">
-                {data.match}% match
+                {t("common.matchPct", { value: data.match })}
               </span>
               {data.tags.map((t) => (
                 <span
@@ -137,19 +143,19 @@ export default function StyleDetailPage() {
             </h1>
 
             <section>
-              <p className="eyebrow mb-2.5">Why it works</p>
+              <p className="eyebrow mb-2.5">{t("styleDetail.whyItWorks")}</p>
               <p className="text-[15px] leading-relaxed text-cream/90">{data.why}</p>
             </section>
 
             <Card className="p-5">
               <div className="flex items-start justify-between gap-4">
-                <p className="eyebrow">What to tell your {stylist}</p>
+                <p className="eyebrow">{t("styleDetail.tellYourStylist", { stylist })}</p>
                 <button
                   onClick={copyNotes}
                   className="flex shrink-0 items-center gap-1.5 text-[12px] text-champagne transition-opacity hover:opacity-80"
                 >
                   {copied ? <Check className="size-3.5" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
-                  {copied ? "Copied" : "Copy"}
+                  {copied ? t("common.copied") : t("common.copy")}
                 </button>
               </div>
               <p className="mt-3 text-[15px] leading-relaxed text-cream">&ldquo;{data.barberNotes}&rdquo;</p>
@@ -158,7 +164,7 @@ export default function StyleDetailPage() {
             <section className="flex items-center gap-3 rounded-2xl border border-line px-5 py-4">
               <Timer className="size-4 shrink-0 text-champagne" aria-hidden />
               <div>
-                <p className="eyebrow mb-1">Maintenance</p>
+                <p className="eyebrow mb-1">{t("styleDetail.maintenance")}</p>
                 <p className="text-[14px] text-cream/90">{data.maintenance}</p>
               </div>
             </section>
@@ -178,12 +184,12 @@ export default function StyleDetailPage() {
               {saved ? (
                 <>
                   <Check className="size-4" aria-hidden />
-                  Saved
+                  {t("styleDetail.saved")}
                 </>
               ) : (
                 <>
                   <Heart className="size-4" aria-hidden />
-                  Save this style
+                  {t("styleDetail.saveStyle")}
                 </>
               )}
             </Button>
@@ -192,7 +198,7 @@ export default function StyleDetailPage() {
               className="shrink-0 px-6 whitespace-nowrap"
               onClick={() => router.push("/styles")}
             >
-              Try another
+              {t("styleDetail.tryAnother")}
             </Button>
           </div>
         </StickyCta>

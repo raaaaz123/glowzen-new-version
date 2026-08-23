@@ -3,6 +3,7 @@
 import { RotateCw, Sparkles, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
+import { useT } from "@/lib/i18n/I18nContext";
 import type { EmptyError } from "@/lib/emptyError";
 
 export function EmptyState({
@@ -29,12 +30,14 @@ export function EmptyState({
 }
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const t = useT();
+
   return (
     <div className="rounded-card border border-danger/25 bg-danger-bg/6 px-5 py-6 text-center">
       <p className="text-sm leading-relaxed text-danger-soft">{message}</p>
       <Button variant="secondary" size="sm" className="mt-4" onClick={onRetry}>
         <RotateCw className="size-3.5" aria-hidden />
-        Try again
+        {t("common.tryAgain")}
       </Button>
     </div>
   );

@@ -9,25 +9,22 @@ import { Sheet } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState, ErrorState, NothingYet } from "@/components/ui/States";
 import { TopBar } from "@/components/app/TopBar";
+import { Paywall, PaywallPrompt } from "@/components/app/Paywall";
 import { PreviewPending } from "@/components/glow/PreviewPending";
 import { useAsync } from "@/lib/useAsync";
 import { useGlow } from "@/lib/state/GlowContext";
+import { useT } from "@/lib/i18n/I18nContext";
 import { getMakeup } from "@/services/analysisService";
 import { cachedPreview, generateMakeupPreview } from "@/services/transformationService";
 import { Button } from "@/components/ui/Button";
 import type { MakeupLook, Shade } from "@/lib/types";
 
-const UNDERTONE_COPY: Record<string, string> = {
-  warm: "Golden, peachy or yellow cast",
-  cool: "Pink, red or blue cast",
-  neutral: "No strong cast either way",
-  olive: "Green cast — most bases run too pink",
-};
-
 export default function MakeupPage() {
-  const { gender, photoUrl, photoKey } = useGlow();
+  const t = useT();
+  const { gender, photoUrl, photoKey, isSubscribed } = useGlow();
   const { data, loading, error, empty, reload } = useAsync(() => getMakeup(gender), [gender]);
   const [look, setLook] = useState<MakeupLook | null>(null);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   // Rendered on the user's own face. Shown from cache if it exists; generating
   // one is an explicit tap, because each render is a paid image call.
@@ -55,7 +52,7 @@ export default function MakeupPage() {
     try {
       setRender(await generateMakeupPreview(look, photoKey));
     } catch (e) {
-      setRenderError(e instanceof Error ? e.message : "That preview didn't render.");
+      setRenderError(e instanceof Error ? e.message : t("styles.renderFailed"));
     } finally {
       setRendering(false);
     }
@@ -63,11 +60,23 @@ export default function MakeupPage() {
 
   return (
     <main>
-      <TopBar title="Your makeup" />
+      <TopBar title={t("makeup.title")} />
 
+      {!isSubscribed && (
+        <>
+          <PaywallPrompt
+            onOpen={() => setPaywallOpen(true)}
+            message={t("paywall.lockedMakeup")}
+          />
+          <Paywall open={paywallOpen} onClose={() => setPaywallOpen(false)} />
+        </>
+      )}
+
+      {isSubscribed && (
+      <>
       {empty && (
         <div className="mt-8">
-          <NothingYet empty={empty} title="Your shades land here" />
+          <NothingYet empty={empty} title={t("makeup.emptyTitle")} />
         </div>
       )}
 
@@ -88,11 +97,11 @@ export default function MakeupPage() {
         <div className="mt-10">
           <EmptyState
             icon={Palette}
-            title="No shade reading yet"
-            body="Run an analysis and we'll read your undertone from the photo, then match shades to it."
+            title={t("makeup.noReadingTitle")}
+            body={t("makeup.noReadingBody")}
             action={
               <ButtonLink href="/upload" size="md">
-                Start an analysis
+                {t("makeup.startAnalysis")}
               </ButtonLink>
             }
           />
@@ -104,12 +113,17 @@ export default function MakeupPage() {
           {/* ——— the reading */}
           <Card tone="linen" className="mt-6 p-6">
             <p className="font-mono text-[10px] tracking-[0.18em] text-black/45 uppercase">
-              Your undertone
+              {t("makeup.yourUndertone")}
             </p>
-            <h2 className="type-display mt-3 text-[clamp(2rem,9vw,2.8rem)] capitalize">
-              {data.undertone}
+            {/* `capitalize` is gone on purpose: the dictionary already writes
+                each undertone the way its language capitalises, and the CSS
+                rule does nothing useful to Arabic or Japanese. */}
+            <h2 className="type-display mt-3 text-[clamp(2rem,9vw,2.8rem)]">
+              {t(`makeup.undertone.${data.undertone}`)}
             </h2>
-            <p className="mt-2 text-[13px] text-black/55">{UNDERTONE_COPY[data.undertone]}</p>
+            <p className="mt-2 text-[13px] text-black/55">
+              {t(`makeup.undertoneNote.${data.undertone}`)}
+            </p>
 
             <div className="mt-5 flex flex-wrap gap-2">
               <Pill>{data.depth}</Pill>
@@ -121,23 +135,25 @@ export default function MakeupPage() {
 
           {/* ——— shades */}
           <section className="mt-10">
-            <SectionHeader eyebrow="Matched to your undertone" title="Your shades" />
+            <SectionHeader
+              eyebrow={t("makeup.matchedToUndertone")}
+              title={t("makeup.yourShades")}
+            />
             <div className="space-y-3">
-              <ShadeRow label="Base" shades={data.base} />
-              <ShadeRow label="Cheek" shades={data.cheek} />
-              <ShadeRow label="Lip" shades={data.lip} />
-              <ShadeRow label="Eye" shades={data.eye} />
+              <ShadeRow label={t("makeup.base")} shades={data.base} />
+              <ShadeRow label={t("makeup.cheek")} shades={data.cheek} />
+              <ShadeRow label={t("makeup.lip")} shades={data.lip} />
+              <ShadeRow label={t("makeup.eye")} shades={data.eye} />
             </div>
             <p className="mt-4 flex items-start gap-2 text-[11.5px] leading-relaxed text-faint">
               <Sparkles className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-              Screen colour is a starting point, not a match. Phone cameras shift colour, so test
-              base shades along your jaw in daylight before buying.
+              {t("makeup.screenNote")}
             </p>
           </section>
 
           {/* ——— what to skip */}
           <section className="mt-10">
-            <SectionHeader eyebrow="Save your money" title="What to skip" />
+            <SectionHeader eyebrow={t("makeup.saveMoney")} title={t("makeup.whatToSkip")} />
             <Card className="divide-y divide-line">
               {data.avoid.map((a) => (
                 <div key={a.label} className="flex items-start gap-3 px-5 py-4">
@@ -153,7 +169,7 @@ export default function MakeupPage() {
 
           {/* ——— looks */}
           <section className="mt-10 mb-2">
-            <SectionHeader eyebrow="Ranked by how well they suit you" title="Looks to try" />
+            <SectionHeader eyebrow={t("makeup.ranked")} title={t("makeup.looksToTry")} />
             <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
               {data.looks.map((l) => (
                 <button key={l.id} onClick={() => setLook(l)} className="w-full text-left">
@@ -170,7 +186,7 @@ export default function MakeupPage() {
                     <div className="mt-4 flex items-center gap-3">
                       <span className="flex items-center gap-1.5 font-mono text-[11px] text-faint">
                         <Clock className="size-3" aria-hidden />
-                        {l.minutes} min
+                        {t("common.minutes", { count: l.minutes })}
                       </span>
                       <ImpactMeter value={l.match} className="flex-1" />
                     </div>
@@ -197,7 +213,11 @@ export default function MakeupPage() {
         open={Boolean(look)}
         onClose={() => setLook(null)}
         title={look?.name ?? ""}
-        description={look ? `${look.match}% match · about ${look.minutes} minutes` : undefined}
+        description={
+          look
+            ? t("makeup.lookDescription", { match: look.match, minutes: look.minutes })
+            : undefined
+        }
       >
         {look && (
           <div className="space-y-6 pb-2">
@@ -209,7 +229,7 @@ export default function MakeupPage() {
                   photo={photoUrl}
                   styleName={look.name}
                   notes={look.steps[0] ?? ""}
-                  stylistWord="makeup artist"
+                  stylistWord={t("common.makeupArtist")}
                 />
                 {photoKey && (
                   <Button
@@ -222,12 +242,12 @@ export default function MakeupPage() {
                     {rendering ? (
                       <>
                         <Loader2 className="size-4 animate-spin" aria-hidden />
-                        Rendering on your photo…
+                        {t("makeup.renderingOnPhoto")}
                       </>
                     ) : (
                       <>
                         <Sparkles className="size-4" aria-hidden />
-                        See it on my face
+                        {t("makeup.seeItOnMyFace")}
                       </>
                     )}
                   </Button>
@@ -239,12 +259,12 @@ export default function MakeupPage() {
             )}
 
             <div>
-              <p className="eyebrow mb-2">Why it works</p>
+              <p className="eyebrow mb-2">{t("makeup.whyItWorks")}</p>
               <p className="text-[14px] leading-relaxed text-muted">{look.why}</p>
             </div>
 
             <div>
-              <p className="eyebrow mb-3">Shades</p>
+              <p className="eyebrow mb-3">{t("makeup.shades")}</p>
               <div className="space-y-2">
                 {look.shades.map((sh) => (
                   <ShadeChip key={sh.name} shade={sh} />
@@ -253,7 +273,7 @@ export default function MakeupPage() {
             </div>
 
             <div>
-              <p className="eyebrow mb-3">How to do it</p>
+              <p className="eyebrow mb-3">{t("makeup.howToDoIt")}</p>
               <ul className="space-y-2.5">
                 {look.steps.map((step, i) => (
                   <li key={step} className="flex gap-3 text-[14px] leading-relaxed text-cream/90">
@@ -267,7 +287,7 @@ export default function MakeupPage() {
             </div>
 
             <div>
-              <p className="eyebrow mb-3">What to buy</p>
+              <p className="eyebrow mb-3">{t("makeup.whatToBuy")}</p>
               <div className="space-y-2">
                 {look.products.map((prod) => (
                   <div key={prod.type} className="rounded-2xl border border-line bg-raised px-4 py-3">
@@ -277,13 +297,14 @@ export default function MakeupPage() {
                 ))}
               </div>
               <p className="mt-3 text-[11.5px] leading-relaxed text-faint">
-                Categories and shades, not brands — we can&apos;t verify a specific product matches
-                your skin, and a wrong base is a wasted purchase.
+                {t("makeup.brandsNote")}
               </p>
             </div>
           </div>
         )}
       </Sheet>
+      </>
+      )}
     </main>
   );
 }

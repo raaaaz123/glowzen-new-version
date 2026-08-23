@@ -8,10 +8,12 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { ErrorState, NothingYet } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
 import { TopBar } from "@/components/app/TopBar";
+import { Paywall, PaywallPrompt } from "@/components/app/Paywall";
 import { CompareSlider } from "@/components/glow/CompareSlider";
 import { PreviewPending } from "@/components/glow/PreviewPending";
 import { useAsync } from "@/lib/useAsync";
 import { useGlow } from "@/lib/state/GlowContext";
+import { useT } from "@/lib/i18n/I18nContext";
 import { stylistWord } from "@/lib/copy";
 import { getBeard } from "@/services/analysisService";
 import { generateBeardPreview, savedPreviewIds } from "@/services/transformationService";
@@ -28,10 +30,12 @@ import { cn } from "@/lib/utils";
  */
 export default function BeardPage() {
   const toast = useToast();
-  const { gender, photoUrl, photoKey, hydrated } = useGlow();
+  const t = useT();
+  const { gender, photoUrl, photoKey, hydrated, isSubscribed } = useGlow();
   const { data: beard, loading, error, empty, reload } = useAsync(() => getBeard(gender), [gender]);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
-  const stylist = stylistWord(gender);
+  const stylist = stylistWord(t, gender);
   const cleanShaven = beard?.verdict === "clean-shaven";
 
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -62,12 +66,12 @@ export default function BeardPage() {
         setPreview(await generateBeardPreview(gender, styleId, photoKey));
         setSaved((prev) => (prev.has(styleId) ? prev : new Set(prev).add(styleId)));
       } catch (e) {
-        setPreviewError(e instanceof Error ? e.message : "That preview didn't render.");
+        setPreviewError(e instanceof Error ? e.message : t("styles.renderFailed"));
       } finally {
         setGenerating(false);
       }
     },
-    [gender, photoKey],
+    [gender, photoKey, t],
   );
 
   // Lead with the strongest match so the screen is never empty. Waits for
@@ -83,20 +87,32 @@ export default function BeardPage() {
     try {
       await navigator.clipboard.writeText(`${active.name} — ${active.barberNotes}`);
       setCopied(true);
-      toast("Copied. Show it at the chair.");
+      toast(t("common.copiedForChair"));
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      toast("Copying isn't available here. Screenshot it instead.", "info");
+      toast(t("common.copyUnavailable"), "info");
     }
   }
 
   return (
     <main>
-      <TopBar title="Your facial hair" />
+      <TopBar title={t("beard.title")} />
 
+      {!isSubscribed && (
+        <>
+          <PaywallPrompt
+            onOpen={() => setPaywallOpen(true)}
+            message={t("paywall.lockedBeard")}
+          />
+          <Paywall open={paywallOpen} onClose={() => setPaywallOpen(false)} />
+        </>
+      )}
+
+      {isSubscribed && (
+      <>
       {empty && (
         <div className="mt-8">
-          <NothingYet empty={empty} title="Your facial-hair reading lands here" />
+          <NothingYet empty={empty} title={t("beard.emptyTitle")} />
         </div>
       )}
 
@@ -118,10 +134,10 @@ export default function BeardPage() {
           {/* ——— the verdict, before anything else */}
           <Card tone="linen" className="mt-6 p-5 sm:p-6">
             <p className="font-mono text-[10px] tracking-[0.18em] text-black/45 uppercase">
-              {cleanShaven ? "The verdict" : "Matched to your jaw"}
+              {t(cleanShaven ? "beard.verdict" : "beard.matchedToJaw")}
             </p>
             <h1 className="type-display mt-3 text-[clamp(1.8rem,7vw,2.4rem)] leading-[1.05]">
-              {cleanShaven ? "Clean-shaven suits you best." : "A beard works on this face."}
+              {t(cleanShaven ? "beard.cleanShavenTitle" : "beard.beardWorksTitle")}
             </h1>
             <p className="mt-3 text-[14px] leading-relaxed text-black/65">{beard.summary}</p>
             <p className="mt-3 text-[14px] leading-relaxed text-black/75">
@@ -135,9 +151,7 @@ export default function BeardPage() {
           </Card>
 
           <p className="mt-6 max-w-md text-[15px] leading-relaxed text-muted">
-            {cleanShaven
-              ? "Drag the line to see it on your own photo before you reach for the razor."
-              : "Drag the line to see each shape on your own photo before you commit to it."}
+            {t(cleanShaven ? "beard.introCleanShaven" : "beard.introBeard")}
           </p>
 
           <div className="lg:mt-6 lg:grid lg:grid-cols-[1fr_380px] lg:items-start lg:gap-10">
@@ -153,7 +167,7 @@ export default function BeardPage() {
                   <div className="absolute inset-0 grid place-items-center">
                     <div className="flex items-center gap-2.5 rounded-full bg-ink/70 px-4 py-2.5 text-[13px] backdrop-blur-md">
                       <Loader2 className="size-3.5 animate-spin text-champagne" aria-hidden />
-                      Rendering your preview…
+                      {t("styles.rendering")}
                     </div>
                   </div>
                 </div>
@@ -166,7 +180,7 @@ export default function BeardPage() {
                   ) : (
                     <PreviewPending
                       photo={photoUrl}
-                      styleName={active?.name ?? "this shape"}
+                      styleName={active?.name ?? t("beard.thisShape")}
                       notes={active?.barberNotes ?? ""}
                       stylistWord={stylist}
                     />
@@ -182,8 +196,8 @@ export default function BeardPage() {
             <div className="mt-10 lg:mt-0">
               <p className="eyebrow mb-4">
                 {cleanShaven
-                  ? "What to ask for"
-                  : `${beard.styles.length} shapes matched to your growth`}
+                  ? t("beard.whatToAskFor")
+                  : t("beard.shapesMatched", { count: beard.styles.length })}
               </p>
 
               <div className="space-y-3">
@@ -242,17 +256,17 @@ export default function BeardPage() {
                         {isActive && !generating ? (
                           <>
                             <Check className="size-3.5" aria-hidden />
-                            Showing
+                            {t("styles.showing")}
                           </>
                         ) : isSaved ? (
                           <>
                             <ImageIcon className="size-3.5" aria-hidden />
-                            View saved
+                            {t("styles.viewSaved")}
                           </>
                         ) : (
                           <>
                             <Sparkles className="size-3.5" aria-hidden />
-                            Preview
+                            {t("styles.preview")}
                           </>
                         )}
                       </Button>
@@ -265,7 +279,7 @@ export default function BeardPage() {
               {active && (
                 <Card className="mt-6 p-5">
                   <div className="flex items-start justify-between gap-4">
-                    <p className="eyebrow">What to tell your {stylist}</p>
+                    <p className="eyebrow">{t("beard.tellYourStylist", { stylist })}</p>
                     <button
                       onClick={copyNotes}
                       className="flex shrink-0 items-center gap-1.5 text-[12px] text-champagne transition-opacity hover:opacity-80"
@@ -275,7 +289,7 @@ export default function BeardPage() {
                       ) : (
                         <Copy className="size-3.5" aria-hidden />
                       )}
-                      {copied ? "Copied" : "Copy"}
+                      {copied ? t("common.copied") : t("common.copy")}
                     </button>
                   </div>
                   <p className="mt-3 text-[15px] leading-relaxed text-cream">
@@ -285,12 +299,13 @@ export default function BeardPage() {
               )}
 
               <p className="mt-5 mb-2 text-[11.5px] leading-relaxed text-faint">
-                Previews are illustrative, and growth takes weeks that a render doesn&apos;t.
-                Bring the notes to your {stylist} — they matter more than the picture.
+                {t("beard.previewsNote", { stylist })}
               </p>
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </main>
   );

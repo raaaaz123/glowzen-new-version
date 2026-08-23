@@ -32,6 +32,14 @@ const EMPTY_ANSWERS: QuestionnaireAnswers = {
   priority: null,
 };
 
+export interface SubscriptionState {
+  active: boolean;
+  plan: "trial" | "monthly" | "yearly" | null;
+  expiresAt: string | null;
+  polarCustomerId: string | null;
+  polarSubscriptionId: string | null;
+}
+
 interface Persisted {
   answers: QuestionnaireAnswers;
   hasAnalysis: boolean;
@@ -41,6 +49,7 @@ interface Persisted {
   taskState: Record<string, boolean>;
   /** YYYY-MM-DD → habit ids ticked that day. Drives the streak. */
   habitLog: Record<string, string[]>;
+  subscription: SubscriptionState | null;
 }
 
 interface GlowValue extends Persisted {
@@ -48,6 +57,8 @@ interface GlowValue extends Persisted {
   photoUrl: string | null;
   hydrated: boolean;
   gender: Gender | null;
+  /** True when the user has an active paid subscription. */
+  isSubscribed: boolean;
   setAnswer: <K extends keyof QuestionnaireAnswers>(
     key: K,
     value: QuestionnaireAnswers[K],
@@ -56,6 +67,7 @@ interface GlowValue extends Persisted {
   setPhotoKey: (key: string | null) => void;
   completeAnalysis: () => void;
   setSavedStyleId: (id: string | null) => void;
+  setSubscription: (sub: SubscriptionState | null) => void;
   toggleTask: (id: string, done: boolean) => void;
   toggleHabit: (id: string, done: boolean) => void;
   reset: () => void;
@@ -71,6 +83,7 @@ export function GlowProvider({ children }: { children: ReactNode }) {
     photoKey: null,
     taskState: {},
     habitLog: {},
+    subscription: null,
   });
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -103,13 +116,14 @@ export function GlowProvider({ children }: { children: ReactNode }) {
     void getUserDoc().then((remote) => {
       if (cancelled) return;
       const hasRemoteAnswers = Object.values(remote.answers ?? {}).some(Boolean);
-      if (!hasRemoteAnswers && !remote.savedStyleId && !remote.photoKey) return;
+      if (!hasRemoteAnswers && !remote.savedStyleId && !remote.photoKey && !remote.subscription) return;
 
       setState((prev) => ({
         ...prev,
         answers: { ...prev.answers, ...remote.answers },
         savedStyleId: remote.savedStyleId ?? prev.savedStyleId,
         photoKey: remote.photoKey ?? prev.photoKey,
+        subscription: remote.subscription ?? prev.subscription,
       }));
       // Stored photos are private; the read URL is signed fresh and expires.
       if (remote.photoKey) {
@@ -149,6 +163,10 @@ export function GlowProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, savedStyleId: id }));
   }, []);
 
+  const setSubscription = useCallback((sub: SubscriptionState | null) => {
+    setState((prev) => ({ ...prev, subscription: sub }));
+  }, []);
+
   const toggleTask = useCallback((id: string, done: boolean) => {
     setState((prev) => ({ ...prev, taskState: { ...prev.taskState, [id]: done } }));
   }, []);
@@ -170,9 +188,16 @@ export function GlowProvider({ children }: { children: ReactNode }) {
       photoKey: null,
       taskState: {},
       habitLog: {},
+      subscription: null,
     });
     setPhotoUrl(null);
   }, []);
+
+  const isSubscribed = Boolean(
+    state.subscription?.active &&
+      (!state.subscription.expiresAt ||
+        new Date(state.subscription.expiresAt) > new Date()),
+  );
 
   const value = useMemo<GlowValue>(
     () => ({
@@ -180,11 +205,13 @@ export function GlowProvider({ children }: { children: ReactNode }) {
       photoUrl,
       hydrated,
       gender: state.answers.gender,
+      isSubscribed,
       setAnswer,
       setPhotoUrl,
       setPhotoKey,
       completeAnalysis,
       setSavedStyleId,
+      setSubscription,
       toggleTask,
       toggleHabit,
       reset,
@@ -193,10 +220,12 @@ export function GlowProvider({ children }: { children: ReactNode }) {
       state,
       photoUrl,
       hydrated,
+      isSubscribed,
       setAnswer,
       setPhotoKey,
       completeAnalysis,
       setSavedStyleId,
+      setSubscription,
       toggleTask,
       toggleHabit,
       reset,

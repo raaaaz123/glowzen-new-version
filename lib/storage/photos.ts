@@ -1,4 +1,6 @@
 import { getIdToken } from "@/lib/firebase/auth";
+import { LOCALE_HEADER } from "@/lib/i18n/config";
+import { getRuntimeLocale, st } from "@/lib/i18n/runtime";
 import type { Gender } from "@/lib/types";
 
 export interface StoredPhoto {
@@ -8,9 +10,16 @@ export interface StoredPhoto {
   url: string;
 }
 
+/**
+ * Auth plus the language, on every call to our own routes. The upload sends the
+ * photo as its body and has nowhere to put a `locale` field, so the header is
+ * the one place that works for all of them.
+ */
 async function authHeaders(): Promise<Record<string, string> | null> {
   const token = await getIdToken();
-  return token ? { authorization: `Bearer ${token}` } : null;
+  return token
+    ? { authorization: `Bearer ${token}`, [LOCALE_HEADER]: getRuntimeLocale() }
+    : null;
 }
 
 async function messageFrom(response: Response, fallback: string) {
@@ -43,7 +52,7 @@ export async function uploadPhoto(file: File): Promise<StoredPhoto> {
     return { key: "", url: URL.createObjectURL(file) };
   }
   if (!response.ok) {
-    throw new Error(await messageFrom(response, "We couldn't save that photo."));
+    throw new Error(await messageFrom(response, st("errors.photoSaveFailed")));
   }
 
   const { key } = (await response.json()) as { key: string };
@@ -108,7 +117,7 @@ export async function generatePreviewImage(input: {
   gender?: Gender | null;
 }): Promise<StoredPhoto> {
   const headers = await authHeaders();
-  if (!headers) throw new PreviewError("Sign-in is needed to render a preview.", "unauthenticated");
+  if (!headers) throw new PreviewError(st("errors.previewNeedsSignIn"), "unauthenticated");
 
   const response = await fetch("/api/preview", {
     method: "POST",
@@ -120,12 +129,12 @@ export async function generatePreviewImage(input: {
     const body = (await response.json().catch(() => null)) as
       | { error?: string; code?: string }
       | null;
-    throw new PreviewError(body?.error ?? "That preview didn't render.", body?.code);
+    throw new PreviewError(body?.error ?? st("errors.previewFailed"), body?.code);
   }
 
   const { key } = (await response.json()) as { key: string };
   const url = await getPhotoUrl(key);
-  if (!url) throw new PreviewError("We rendered it but couldn't load it back.", "unreadable");
+  if (!url) throw new PreviewError(st("errors.previewUnreadable"), "unreadable");
   return { key, url };
 }
 

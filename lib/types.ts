@@ -12,10 +12,25 @@ export type FocusArea =
   | "skin"
   | "style";
 
+/** A question option as the UI renders it, once the words have been resolved. */
 export interface Choice {
   id: string;
   label: string;
   hint?: string;
+}
+
+/**
+ * A question option as it is *defined*: a stable id and a dictionary key. The
+ * words come from whichever language the reader chose, so they cannot live
+ * here.
+ */
+export interface ChoiceDef {
+  /** Stored on the user and sent to the model. Never translated. */
+  id: string;
+  /** Key under `choices.<category>` in the dictionaries. */
+  key: string;
+  /** True when this option's entry is `{ label, hint }` rather than a string. */
+  hint?: boolean;
 }
 
 export interface QuestionnaireAnswers {

@@ -1,14 +1,17 @@
+"use client";
+
+import { useI18n } from "@/lib/i18n/I18nContext";
 import { cn } from "@/lib/utils";
 
 export function StepBar({ step, total }: { step: number; total: number }) {
+  const { t, formatNumber } = useI18n();
+
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <p className="eyebrow">
-          Step {step} of {total}
-        </p>
+        <p className="eyebrow">{t("questionnaire.stepOf", { step, total })}</p>
         <p className="font-mono text-[11px] text-faint">
-          {Math.round((step / total) * 100)}%
+          {formatNumber(Math.round((step / total) * 100) / 100, { style: "percent" })}
         </p>
       </div>
       <div className="flex gap-1.5" aria-hidden>

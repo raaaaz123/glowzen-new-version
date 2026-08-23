@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { useI18n } from "@/lib/i18n/I18nContext";
 import { cn } from "@/lib/utils";
 
 /**
@@ -10,8 +11,8 @@ import { cn } from "@/lib/utils";
 export function CompareSlider({
   before,
   after,
-  beforeLabel = "Current",
-  afterLabel = "Potential",
+  beforeLabel,
+  afterLabel,
   className,
   frameClassName = "aspect-[4/5]",
   imagePosition = "object-center",
@@ -20,6 +21,7 @@ export function CompareSlider({
   /** Nullable: a scan can have no readable photo, and "" is not a valid src. */
   before: string | null;
   after: string | null;
+  /** Defaults to the translated "Current" / "Potential". */
   beforeLabel?: string;
   afterLabel?: string;
   className?: string;
@@ -28,16 +30,25 @@ export function CompareSlider({
   imagePosition?: string;
   priority?: boolean;
 }) {
+  const { t, dir } = useI18n();
+  const before_ = beforeLabel ?? t("common.current");
+  const after_ = afterLabel ?? t("common.potential");
   const [position, setPosition] = useState(50);
   const [dragging, setDragging] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
-  const move = useCallback((clientX: number) => {
-    const rect = trackRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const next = ((clientX - rect.left) / rect.width) * 100;
-    setPosition(Math.min(100, Math.max(0, next)));
-  }, []);
+  // In a right-to-left layout the "before" side is on the right, so the
+  // position the pointer maps to is measured from the right edge instead.
+  const rtl = dir === "rtl";
+  const move = useCallback(
+    (clientX: number) => {
+      const rect = trackRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const raw = rtl ? rect.right - clientX : clientX - rect.left;
+      setPosition(Math.min(100, Math.max(0, (raw / rect.width) * 100)));
+    },
+    [rtl],
+  );
 
   return (
     <div
@@ -61,7 +72,7 @@ export function CompareSlider({
       {after && (
         <img
           src={after}
-          alt={afterLabel}
+          alt={after_}
           loading={priority ? "eager" : "lazy"}
           className={cn("absolute inset-0 size-full object-cover", imagePosition)}
         />
@@ -69,32 +80,36 @@ export function CompareSlider({
       {before && (
         <div
           className="absolute inset-0 overflow-hidden"
-          style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}
+          style={{
+            clipPath: rtl
+              ? `inset(0 0 0 ${100 - position}%)`
+              : `inset(0 ${100 - position}% 0 0)`,
+          }}
         >
           <img
             src={before}
-            alt={beforeLabel}
+            alt={before_}
             loading={priority ? "eager" : "lazy"}
             className={cn("size-full object-cover", imagePosition)}
           />
         </div>
       )}
 
-      <span className="absolute top-3 left-3 rounded-full bg-black/55 px-3 py-1 font-mono text-[10px] tracking-[0.14em] text-white/90 uppercase backdrop-blur-md">
-        {beforeLabel}
+      <span className="absolute top-3 start-3 rounded-full bg-black/55 px-3 py-1 font-mono text-[10px] tracking-[0.14em] text-white/90 uppercase backdrop-blur-md">
+        {before_}
       </span>
-      <span className="absolute top-3 right-3 rounded-full bg-champagne px-3 py-1 font-mono text-[10px] tracking-[0.14em] text-on-accent uppercase">
-        {afterLabel}
+      <span className="absolute top-3 end-3 rounded-full bg-champagne px-3 py-1 font-mono text-[10px] tracking-[0.14em] text-on-accent uppercase">
+        {after_}
       </span>
 
       <div
         className="absolute inset-y-0 w-px bg-cream/90 shadow-[0_0_24px_rgba(244,219,174,.55)]"
-        style={{ left: `${position}%` }}
+        style={{ insetInlineStart: `${position}%` }}
       >
         <button
           type="button"
           role="slider"
-          aria-label="Compare current and potential"
+          aria-label={t("compare.label")}
           aria-valuenow={Math.round(position)}
           aria-valuemin={0}
           aria-valuemax={100}

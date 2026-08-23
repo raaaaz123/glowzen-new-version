@@ -5,15 +5,18 @@ import { useEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { ProgressRing } from "@/components/ui/ProgressRing";
 import { ErrorState } from "@/components/ui/States";
-import { ANALYSIS_STAGES, runAnalysis } from "@/services/analysisService";
+import { ANALYSIS_STAGE_KEYS, runAnalysis } from "@/services/analysisService";
 import { useGlow } from "@/lib/state/GlowContext";
+import { useT } from "@/lib/i18n/I18nContext";
+import { st } from "@/lib/i18n/runtime";
 import { cn } from "@/lib/utils";
 
 const STAGE_MS = 1500;
 
 export default function AnalyzingPage() {
   const router = useRouter();
-  const { gender, photoUrl, photoKey, answers, completeAnalysis, hydrated } = useGlow();
+  const t = useT();
+  const { gender, photoUrl, photoKey, answers, completeAnalysis, hydrated, isSubscribed } = useGlow();
   const [stage, setStage] = useState(0);
   const [percent, setPercent] = useState(4);
   const [failure, setFailure] = useState<string | null>(null);
@@ -42,7 +45,7 @@ export default function AnalyzingPage() {
     setPercent(4);
 
     const stageTimer = setInterval(() => {
-      setStage((s) => Math.min(s + 1, ANALYSIS_STAGES.length - 1));
+      setStage((s) => Math.min(s + 1, ANALYSIS_STAGE_KEYS.length - 1));
     }, STAGE_MS);
 
     const tick = setInterval(() => {
@@ -69,19 +72,25 @@ export default function AnalyzingPage() {
         // still gets the full reveal and a slow one doesn't stall on 97%.
         await Promise.all([
           runAnalysis(g, url, key, a),
-          new Promise((r) => setTimeout(r, STAGE_MS * ANALYSIS_STAGES.length)),
+          new Promise((r) => setTimeout(r, STAGE_MS * ANALYSIS_STAGE_KEYS.length)),
         ]);
         if (!alive.current) return;
         setPercent(100);
-        setStage(ANALYSIS_STAGES.length);
+        setStage(ANALYSIS_STAGE_KEYS.length);
         completeAnalysis();
-        setTimeout(() => router.replace("/results"), 700);
+        // Subscribers see full results; everyone else sees the blurred preview
+        // with paywall.
+        const dest = isSubscribed ? "/results" : "/results/preview";
+        setTimeout(() => router.replace(dest), 700);
       } catch (error) {
         if (!alive.current) return;
         setFailure(
           error instanceof Error
             ? error.message
-            : "The analysis didn't finish. Your photo is still saved.",
+            : // `st` rather than `t`: this effect must never re-run, and taking
+              // the hook's function as a dependency would make switching
+              // language mid-analysis fire a second paid call.
+              st("analyzing.failed"),
         );
       }
     })();
@@ -97,9 +106,9 @@ export default function AnalyzingPage() {
 
       <div className="relative">
         <h1 className="type-display mb-12 text-[clamp(1.85rem,7vw,2.4rem)]">
-          Analyzing your
+          {t("analyzing.titleLine1")}
           <br />
-          glow-up potential…
+          {t("analyzing.titleLine2")}
         </h1>
 
         {failure ? (
@@ -109,7 +118,7 @@ export default function AnalyzingPage() {
               onClick={() => router.push("/upload")}
               className="mt-4 w-full text-[13px] text-muted underline underline-offset-4 transition-colors hover:text-cream"
             >
-              Use a different photo
+              {t("analyzing.differentPhoto")}
             </button>
           </div>
         ) : (
@@ -123,13 +132,13 @@ export default function AnalyzingPage() {
               </div>
             </ProgressRing>
 
-            <ul className="mt-12 space-y-3 text-left">
-              {ANALYSIS_STAGES.map((label, i) => {
+            <ul className="mt-12 space-y-3 text-start">
+              {ANALYSIS_STAGE_KEYS.map((key, i) => {
                 const done = i < stage;
                 const active = i === stage;
                 return (
                   <li
-                    key={label}
+                    key={key}
                     className={cn(
                       "flex items-center gap-3 text-[14px] transition-all duration-500",
                       done && "text-muted",
@@ -151,7 +160,7 @@ export default function AnalyzingPage() {
                         <span className="size-1.5 animate-pulse rounded-full bg-champagne" />
                       ) : null}
                     </span>
-                    {label}
+                    {t(key)}
                   </li>
                 );
               })}
@@ -161,7 +170,7 @@ export default function AnalyzingPage() {
       </div>
 
       <p className="absolute inset-x-0 bottom-8 px-8 text-[11px] leading-relaxed text-faint">
-        Results are AI-generated suggestions, not measurements.
+        {t("common.aiLong")}
       </p>
     </main>
   );

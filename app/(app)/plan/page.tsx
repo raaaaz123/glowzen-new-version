@@ -12,11 +12,13 @@ import { TopBar } from "@/components/app/TopBar";
 import { RoutineCard } from "@/components/glow/RoutineCard";
 import { useAsync } from "@/lib/useAsync";
 import { useGlow } from "@/lib/state/GlowContext";
+import { useT } from "@/lib/i18n/I18nContext";
 import { getPlan, setTaskDone, startPlan } from "@/services/progressService";
 import { cn } from "@/lib/utils";
 
 export default function PlanPage() {
   const toast = useToast();
+  const t = useT();
   const { gender, taskState, toggleTask } = useGlow();
   const { data, loading, error, empty, reload } = useAsync(() => getPlan(gender), [gender]);
   const [started, setStarted] = useState(false);
@@ -46,10 +48,10 @@ export default function PlanPage() {
     toggleTask(id, next); // optimistic
     try {
       await setTaskDone(id, next);
-      if (next) toast("Nice. One less thing.");
+      if (next) toast(t("plan.taskDone"));
     } catch {
       toggleTask(id, !next);
-      toast("That didn't save. Try again.", "error");
+      toast(t("common.couldntSave"), "error");
     } finally {
       setPending(null);
     }
@@ -57,11 +59,11 @@ export default function PlanPage() {
 
   return (
     <main>
-      <TopBar back={false} title="Your 60-Day Glow-Up" />
+      <TopBar back={false} title={t("plan.title")} />
 
       {empty && (
         <div className="mt-8">
-          <NothingYet empty={empty} title="Your plan gets built from your scan" />
+          <NothingYet empty={empty} title={t("plan.emptyTitle")} />
         </div>
       )}
 
@@ -89,7 +91,7 @@ export default function PlanPage() {
                 <p className="eyebrow mb-1.5">{data.startedLabel}</p>
                 <p className="text-[15px]">
                   <span className="type-display text-[1.9rem]">{done}</span>
-                  <span className="text-muted">&nbsp;of {total} steps done</span>
+                  <span className="text-muted">&nbsp;{t("plan.stepsDone", { total })}</span>
                 </p>
               </div>
               <span className="font-mono text-[13px] text-champagne">{percent}%</span>
@@ -104,19 +106,19 @@ export default function PlanPage() {
             onClick={() => {
               setStarted(true);
               void startPlan();
-              toast("Week 1 started. First up: book your cut.");
+              toast(t("plan.weekOneStarted"));
             }}
           >
-            {started ? "Week 1 in progress" : "Start Week 1"}
+            {started ? t("plan.weekOneInProgress") : t("plan.startWeekOne")}
           </Button>
 
           <section className="mt-9">
-            <SectionHeader eyebrow="Every day" title="Your routine" />
+            <SectionHeader eyebrow={t("plan.everyDay")} title={t("plan.yourRoutine")} />
             <RoutineCard habits={data.habits} />
           </section>
 
           <section className="mt-8">
-            <SectionHeader eyebrow="Ahead of you" title="Milestones" />
+            <SectionHeader eyebrow={t("plan.aheadOfYou")} title={t("plan.milestones")} />
             <div className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 lg:mx-0 lg:px-0">
               {data.milestones.map((m) => (
                 <Card
@@ -128,7 +130,7 @@ export default function PlanPage() {
                   )}
                 >
                   <div className="mb-3 flex items-center justify-between">
-                    <span className="eyebrow">Day {m.day}</span>
+                    <span className="eyebrow">{t("common.day", { day: m.day })}</span>
                     {m.state === "done" ? (
                       <Check className="size-3.5 text-champagne" strokeWidth={3} aria-hidden />
                     ) : m.state === "next" ? (
@@ -146,8 +148,8 @@ export default function PlanPage() {
 
           <SectionHeader
             className="mt-10"
-            eyebrow="Days 1-30"
-            title="Phase one · the visible wins"
+            eyebrow={t("plan.phaseOneEyebrow")}
+            title={t("plan.phaseOneTitle")}
           />
 
           <ol className="lg:grid lg:grid-cols-2 lg:gap-5">
@@ -155,17 +157,17 @@ export default function PlanPage() {
               const weekDone = week.tasks.every((t) => t.done);
               const locked = week.state === "upcoming" && !started && i > 0;
               return (
-                <li key={week.week} className="relative pb-8 pl-8 lg:pb-0 lg:pl-0">
+                <li key={week.week} className="relative pb-8 ps-8 lg:pb-0 lg:ps-0">
                   {/* connector — only meaningful in the single-column timeline */}
                   {i < phaseOne.length - 1 && (
                     <span
-                      className="absolute top-2 bottom-0 left-[7px] w-px bg-line lg:hidden"
+                      className="absolute top-2 bottom-0 start-[7px] w-px bg-line lg:hidden"
                       aria-hidden
                     />
                   )}
                   <span
                     className={cn(
-                      "absolute top-1 left-0 size-[15px] rounded-full border-2 lg:hidden",
+                      "absolute top-1 start-0 size-[15px] rounded-full border-2 lg:hidden",
                       weekDone
                         ? "border-champagne bg-champagne"
                         : week.state === "active"
@@ -184,14 +186,14 @@ export default function PlanPage() {
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="eyebrow mb-1.5">Week {week.week}</p>
+                        <p className="eyebrow mb-1.5">{t("common.week", { week: week.week })}</p>
                         <h2 className="type-display text-[1.5rem]">
                           {week.title}
                         </h2>
                       </div>
                       {week.state === "active" && (
                         <span className="rounded-full bg-champagne/12 px-3 py-1 font-mono text-[10px] tracking-[0.14em] text-champagne uppercase">
-                          Now
+                          {t("common.now")}
                         </span>
                       )}
                       {locked && <Lock className="size-4 shrink-0 text-faint" aria-hidden />}
@@ -205,7 +207,7 @@ export default function PlanPage() {
                           <button
                             onClick={() => onToggle(task.id, !task.done)}
                             disabled={locked || pending === task.id}
-                            className="flex w-full items-center gap-3 rounded-xl py-2.5 text-left transition-colors hover:bg-cream/[.03] disabled:cursor-not-allowed"
+                            className="flex w-full items-center gap-3 rounded-xl py-2.5 text-start transition-colors hover:bg-cream/[.03] disabled:cursor-not-allowed"
                           >
                             <span
                               className={cn(
@@ -237,13 +239,13 @@ export default function PlanPage() {
 
           <SectionHeader
             className="mt-6"
-            eyebrow="Days 31-60"
-            title="Phase two · what compounds"
+            eyebrow={t("plan.phaseTwoEyebrow")}
+            title={t("plan.phaseTwoTitle")}
             action={
               phaseTwoOpen ? undefined : (
                 <span className="flex items-center gap-1.5 text-[12px] text-faint">
                   <Lock className="size-3.5" aria-hidden />
-                  Opens after phase one
+                  {t("plan.opensAfterPhaseOne")}
                 </span>
               )
             }
@@ -255,7 +257,7 @@ export default function PlanPage() {
                 <Card className="p-5 lg:mb-5">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="eyebrow mb-1.5">Week {week.week}</p>
+                      <p className="eyebrow mb-1.5">{t("common.week", { week: week.week })}</p>
                       <h2 className="type-display text-[1.5rem]">{week.title}</h2>
                     </div>
                     {!phaseTwoOpen && <Lock className="size-4 shrink-0 text-faint" aria-hidden />}
@@ -267,7 +269,7 @@ export default function PlanPage() {
                         <button
                           onClick={() => onToggle(task.id, !task.done)}
                           disabled={!phaseTwoOpen || pending === task.id}
-                          className="flex w-full items-center gap-3 rounded-xl py-2.5 text-left transition-colors hover:bg-cream/[.03] disabled:cursor-not-allowed"
+                          className="flex w-full items-center gap-3 rounded-xl py-2.5 text-start transition-colors hover:bg-cream/[.03] disabled:cursor-not-allowed"
                         >
                           <span
                             className={cn(

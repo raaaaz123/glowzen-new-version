@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Type } from "@google/genai";
+import { DEFAULT_LOCALE, LOCALE_META, type Locale } from "@/lib/i18n/config";
 import type { QuestionnaireAnswers } from "@/lib/types";
 
 /**
@@ -50,13 +51,32 @@ THE THREE HAIRCUTS
 - Name real cuts a barber or stylist would recognise by that name, and stay
   inside the hair length they have now unless the blurb admits the grow-out.
 
+LANGUAGE
+- Write EVERY string you return in the language named in the request. That
+  covers the summary, the area labels and notes, all three opportunities and
+  their steps, the haircut names, the barber notes, the maintenance lines, the
+  tags, and every word of the makeup and facial-hair readings. No field is
+  exempt, and nothing is left in English because it "sounds better".
+- Write it the way a person who grew up speaking it writes, not the way a
+  translation of English reads. Use that language's own idiom for hair and
+  grooming, and its own conventions for punctuation and quotation marks.
+- Haircuts and beard shapes are the one place where a borrowed English term is
+  often what a local barber actually recognises. When that is true, give the
+  name the way it is said in that market — and if the English name is the one
+  that would be understood at the chair, put it in brackets after the local
+  name so the person can say either.
+- Barber notes are read aloud in a chair in that country. Write them so that
+  works: the language they speak, and the measurements they use — centimetres
+  where centimetres are used, clipper guard numbers where those are standard.
+
 HOW TO WRITE
-- Plain, confident, encouraging English. Sentence case. Short sentences.
+- Plain, confident, encouraging. Sentence case where the language has one.
+  Short sentences.
 - Be specific about what you can actually see in this photo — "your hair sits
   wide at the sides", not "consider a new hairstyle". Specificity is the whole
   product.
-- No jargon. Never write phrases like "facial morphology", "golden ratio",
-  "symmetry score", or "AI analysis determined".
+- No jargon. Never write the local equivalent of "facial morphology", "golden
+  ratio", "symmetry score", or "AI analysis determined".
 - Respect the person's stated limits. If they said they want small changes,
   do not propose growing their hair out for a year.
 - Work with the hair texture they told you they have. Do not recommend a cut
@@ -367,13 +387,28 @@ function haircutBrief(gender: string | null | undefined) {
   );
 }
 
+/**
+ * The language line.
+ *
+ * Stated twice on purpose — once at the top, where it sets the frame for
+ * everything that follows, and once at the bottom, next to the output
+ * instructions, because a long prompt in English is itself a pull back towards
+ * English and the last instruction is the one that sticks.
+ */
+function languageLine(locale: Locale) {
+  return `Write every string you return in ${LOCALE_META[locale].aiName}.`;
+}
+
 /** Turns the questionnaire into the constraints the model has to respect. */
 export function buildPrompt(
   answers: Partial<QuestionnaireAnswers>,
   wantsMakeup: boolean,
   wantsBeard: boolean,
+  locale: Locale = DEFAULT_LOCALE,
 ) {
   return [
+    languageLine(locale),
+    "",
     "Here is the person's photo and what they told us.",
     "",
     `Presents as: ${label(answers.gender, "not stated")}`,
@@ -399,6 +434,9 @@ export function buildPrompt(
     wantsMakeup
       ? "Also fill in makeup: undertone, shades and two or three looks."
       : "Leave makeup out entirely.",
+    "",
+    languageLine(locale),
+    "",
     wantsBeard
       ? [
           "Also fill in the facial-hair reading. Decide first whether a beard",
@@ -434,7 +472,16 @@ RULES
   changes like grow-out and skin turnover actually show.
 - Milestones say what they should SEE by that day, not what to do.
 - No medical claims. Skincare stays general.
-- Plain, encouraging English. Sentence case. Tasks under 12 words.
+- Plain, encouraging language. Sentence case where the language has one. Tasks
+  short enough to scan — around a dozen words in English, and the equivalent
+  length in any other language.
+
+LANGUAGE
+- Write EVERY string in the language named in the request: the title, the
+  subtitle, all eight week titles and focus lines, every task, every habit
+  label and detail, and all four milestones. Nothing stays in English.
+- Write it as a native speaker would, not as a translation. Use that market's
+  own units and conventions.
 `.trim();
 
 export function buildPlanPrompt(input: {
@@ -442,9 +489,14 @@ export function buildPlanPrompt(input: {
   summary: string;
   opportunities: { title: string; recommendation: string; steps: string[] }[];
   topHairstyle?: { name: string; maintenance: string };
+  locale?: Locale;
 }) {
-  const { answers, summary, opportunities, topHairstyle } = input;
+  const { answers, summary, opportunities, topHairstyle, locale = DEFAULT_LOCALE } = input;
   return [
+    languageLine(locale),
+    "",
+    // The analysis it is building on was itself written in this language, so
+    // the summary and the three changes below are already in it.
     "Here is what the analysis found, and what they told us about themselves.",
     "",
     `Summary: ${summary}`,
@@ -463,6 +515,8 @@ export function buildPlanPrompt(input: {
     `Hair length now: ${label(answers.hairLength, "not stated")}`,
     `Skin type: ${label(answers.skinType, "not stated")}`,
     `Skin concerns: ${list(answers.skinConcerns, "none given")}`,
+    "",
+    languageLine(locale),
     "",
     "Write the eight weeks, the daily habits, and milestones for days 7, 14, 30 and 60.",
   ]

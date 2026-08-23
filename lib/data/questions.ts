@@ -1,182 +1,218 @@
-import type { AgeRange, Choice, Gender } from "@/lib/types";
+import type { AgeRange, Choice, ChoiceDef, Gender } from "@/lib/types";
+import type { Vars } from "@/lib/i18n/translate";
 
-export const GENDER_CHOICES: Choice[] = [
-  { id: "male", label: "Male", hint: "Masculine recommendations" },
-  { id: "female", label: "Female", hint: "Feminine recommendations" },
-  { id: "neutral", label: "Non-binary or prefer not to say", hint: "Neutral recommendations" },
+/**
+ * The question sets, as ids and dictionary keys only.
+ *
+ * The id is what gets stored on the user and sent to the model, so it never
+ * changes with the language. The key points at `choices.<category>.<key>` in
+ * the dictionaries, which is where the words the person actually reads live.
+ *
+ * Where a category needs different wording per gender — "Facial hair" vs
+ * "Brows & lashes" behind the same `grooming` id — the key carries the suffix
+ * and the id does not.
+ */
+
+export const GENDER_CHOICES: ChoiceDef[] = [
+  { id: "male", key: "male", hint: true },
+  { id: "female", key: "female", hint: true },
+  { id: "neutral", key: "neutral", hint: true },
 ];
 
-export const AGE_CHOICES: { id: AgeRange; label: string }[] = [
-  { id: "under-18", label: "Under 18" },
-  { id: "18-24", label: "18–24" },
-  { id: "25-34", label: "25–34" },
-  { id: "35-44", label: "35–44" },
-  { id: "45-plus", label: "45+" },
+export const AGE_CHOICES: { id: AgeRange; key: string }[] = [
+  { id: "under-18", key: "under-18" },
+  { id: "18-24", key: "18-24" },
+  { id: "25-34", key: "25-34" },
+  { id: "35-44", key: "35-44" },
+  { id: "45-plus", key: "45-plus" },
 ];
 
-type ChoiceSet = Record<Gender, Choice[]>;
+type ChoiceSet = Record<Gender, ChoiceDef[]>;
 
-const focusBase: Choice[] = [
-  { id: "full", label: "Full glow-up", hint: "Everything, ranked by impact" },
-  { id: "face", label: "Face", hint: "Definition and framing" },
-  { id: "hair", label: "Hair", hint: "Cut, shape, texture" },
+const focusBase: ChoiceDef[] = [
+  { id: "full", key: "full", hint: true },
+  { id: "face", key: "face", hint: true },
+  { id: "hair", key: "hair", hint: true },
 ];
 
-const focusTail: Choice[] = [
-  { id: "skin", label: "Skin", hint: "Clarity and texture" },
-  { id: "style", label: "Style", hint: "Clothing and fit" },
+const focusTail: ChoiceDef[] = [
+  { id: "skin", key: "skin", hint: true },
+  { id: "style", key: "style", hint: true },
 ];
 
 export const FOCUS_CHOICES: ChoiceSet = {
-  male: [
-    ...focusBase,
-    { id: "grooming", label: "Facial hair", hint: "Beard, stubble, neckline" },
-    ...focusTail,
-  ],
-  female: [
-    ...focusBase,
-    { id: "grooming", label: "Brows & lashes", hint: "Shaping and framing" },
-    ...focusTail,
-  ],
-  neutral: [
-    ...focusBase,
-    { id: "grooming", label: "Grooming", hint: "Brows, facial hair, upkeep" },
-    ...focusTail,
-  ],
+  male: [...focusBase, { id: "grooming", key: "groomingMale", hint: true }, ...focusTail],
+  female: [...focusBase, { id: "grooming", key: "groomingFemale", hint: true }, ...focusTail],
+  neutral: [...focusBase, { id: "grooming", key: "groomingNeutral", hint: true }, ...focusTail],
 };
 
-const aestheticShared: Choice[] = [
-  { id: "clean", label: "Clean" },
-  { id: "model", label: "Model" },
-  { id: "athletic", label: "Athletic" },
-  { id: "professional", label: "Professional" },
-  { id: "streetwear", label: "Streetwear" },
-  { id: "old-money", label: "Old money" },
-  { id: "custom", label: "Something else" },
+const aestheticShared: ChoiceDef[] = [
+  { id: "clean", key: "clean" },
+  { id: "model", key: "model" },
+  { id: "athletic", key: "athletic" },
+  { id: "professional", key: "professional" },
+  { id: "streetwear", key: "streetwear" },
+  { id: "old-money", key: "old-money" },
+  { id: "custom", key: "custom" },
 ];
 
 export const AESTHETIC_CHOICES: ChoiceSet = {
-  male: [
-    aestheticShared[0],
-    { id: "masculine", label: "Masculine" },
-    ...aestheticShared.slice(1),
-  ],
-  female: [
-    aestheticShared[0],
-    { id: "feminine", label: "Feminine" },
-    ...aestheticShared.slice(1),
-  ],
+  male: [aestheticShared[0], { id: "masculine", key: "masculine" }, ...aestheticShared.slice(1)],
+  female: [aestheticShared[0], { id: "feminine", key: "feminine" }, ...aestheticShared.slice(1)],
   neutral: [
     aestheticShared[0],
-    { id: "androgynous", label: "Androgynous" },
+    { id: "androgynous", key: "androgynous" },
     ...aestheticShared.slice(1),
   ],
 };
 
-const concernHead: Choice[] = [
-  { id: "hairstyle", label: "Hairstyle" },
-  { id: "definition", label: "Facial definition" },
-  { id: "skin", label: "Skin" },
+const concernHead: ChoiceDef[] = [
+  { id: "hairstyle", key: "hairstyle" },
+  { id: "definition", key: "definition" },
+  { id: "skin", key: "skin" },
 ];
 
-const concernTail: Choice[] = [
-  { id: "style", label: "Clothing & style" },
-  { id: "overall", label: "Overall appearance" },
+const concernTail: ChoiceDef[] = [
+  { id: "style", key: "style" },
+  { id: "overall", key: "overall" },
 ];
 
 export const CONCERN_CHOICES: ChoiceSet = {
   male: [
     ...concernHead,
-    { id: "facial-hair", label: "Facial hair" },
-    { id: "brows", label: "Eyebrows" },
+    { id: "facial-hair", key: "facial-hair" },
+    { id: "brows", key: "browsMale" },
     ...concernTail,
   ],
   female: [
     ...concernHead,
-    { id: "brows", label: "Brows & lashes" },
-    { id: "hair-health", label: "Hair condition" },
+    { id: "brows", key: "browsFemale" },
+    { id: "hair-health", key: "hair-health" },
     ...concernTail,
   ],
   neutral: [
     ...concernHead,
-    { id: "brows", label: "Eyebrows" },
-    { id: "facial-hair", label: "Facial hair" },
+    { id: "brows", key: "browsNeutral" },
+    { id: "facial-hair", key: "facial-hair" },
     ...concernTail,
   ],
 };
 
-export const HAIR_TYPE_CHOICES: Choice[] = [
-  { id: "straight", label: "Straight" },
-  { id: "wavy", label: "Wavy" },
-  { id: "curly", label: "Curly" },
-  { id: "coily", label: "Coily" },
+export const HAIR_TYPE_CHOICES: ChoiceDef[] = [
+  { id: "straight", key: "straight" },
+  { id: "wavy", key: "wavy" },
+  { id: "curly", key: "curly" },
+  { id: "coily", key: "coily" },
 ];
 
 export const HAIR_LENGTH_CHOICES: ChoiceSet = {
   male: [
-    { id: "buzzed", label: "Buzzed" },
-    { id: "short", label: "Short" },
-    { id: "medium", label: "Medium" },
-    { id: "long", label: "Long" },
+    { id: "buzzed", key: "buzzed" },
+    { id: "short", key: "short" },
+    { id: "medium", key: "medium" },
+    { id: "long", key: "long" },
   ],
   female: [
-    { id: "pixie", label: "Pixie" },
-    { id: "bob", label: "Chin to jaw" },
-    { id: "shoulder", label: "Shoulder" },
-    { id: "long", label: "Past shoulder" },
+    { id: "pixie", key: "pixie" },
+    { id: "bob", key: "bob" },
+    { id: "shoulder", key: "shoulder" },
+    { id: "long", key: "longFemale" },
   ],
   neutral: [
-    { id: "buzzed", label: "Buzzed" },
-    { id: "short", label: "Short" },
-    { id: "medium", label: "Medium" },
-    { id: "long", label: "Long" },
+    { id: "buzzed", key: "buzzed" },
+    { id: "short", key: "short" },
+    { id: "medium", key: "medium" },
+    { id: "long", key: "long" },
   ],
 };
 
-export const SKIN_TYPE_CHOICES: Choice[] = [
-  { id: "dry", label: "Dry" },
-  { id: "oily", label: "Oily" },
-  { id: "combination", label: "Combination" },
-  { id: "normal", label: "Normal" },
-  { id: "sensitive", label: "Sensitive" },
-  { id: "unsure", label: "Not sure" },
+export const SKIN_TYPE_CHOICES: ChoiceDef[] = [
+  { id: "dry", key: "dry" },
+  { id: "oily", key: "oily" },
+  { id: "combination", key: "combination" },
+  { id: "normal", key: "normal" },
+  { id: "sensitive", key: "sensitive" },
+  { id: "unsure", key: "unsure" },
 ];
 
 /** Multi-select, capped — a list of eight concerns isn't a priority list. */
-export const SKIN_CONCERN_CHOICES: Choice[] = [
-  { id: "breakouts", label: "Breakouts" },
-  { id: "texture", label: "Texture" },
-  { id: "redness", label: "Redness" },
-  { id: "dark-circles", label: "Dark circles" },
-  { id: "dryness", label: "Dryness" },
-  { id: "oiliness", label: "Shine" },
-  { id: "dullness", label: "Dullness" },
-  { id: "none", label: "Nothing in particular" },
+export const SKIN_CONCERN_CHOICES: ChoiceDef[] = [
+  { id: "breakouts", key: "breakouts" },
+  { id: "texture", key: "texture" },
+  { id: "redness", key: "redness" },
+  { id: "dark-circles", key: "dark-circles" },
+  { id: "dryness", key: "dryness" },
+  { id: "oiliness", key: "oiliness" },
+  { id: "dullness", key: "dullness" },
+  { id: "none", key: "none" },
 ];
 
 export const MAX_SKIN_CONCERNS = 3;
 
-export const DAILY_MINUTES_CHOICES: Choice[] = [
-  { id: "under-5", label: "Under 5 min" },
-  { id: "5-15", label: "5–15 min" },
-  { id: "15-30", label: "15–30 min" },
-  { id: "30-plus", label: "30 min+" },
+export const DAILY_MINUTES_CHOICES: ChoiceDef[] = [
+  { id: "under-5", key: "under-5" },
+  { id: "5-15", key: "5-15" },
+  { id: "15-30", key: "15-30" },
+  { id: "30-plus", key: "30-plus" },
 ];
 
-export const COMMITMENT_CHOICES: Choice[] = [
-  { id: "small", label: "Small improvements", hint: "Nothing anyone would comment on" },
-  { id: "moderate", label: "Moderate changes", hint: "A noticeably different look" },
-  { id: "anything", label: "I'm open to anything", hint: "Show me the full range" },
+export const COMMITMENT_CHOICES: ChoiceDef[] = [
+  { id: "small", key: "small", hint: true },
+  { id: "moderate", key: "moderate", hint: true },
+  { id: "anything", key: "anything", hint: true },
 ];
 
-export const PRIORITY_CHOICES: Choice[] = [
-  { id: "natural", label: "Look better naturally" },
-  { id: "attractive", label: "Look more attractive" },
-  { id: "confident", label: "Look more confident" },
-  { id: "style", label: "Find my personal style" },
+export const PRIORITY_CHOICES: ChoiceDef[] = [
+  { id: "natural", key: "natural" },
+  { id: "attractive", key: "attractive" },
+  { id: "confident", key: "confident" },
+  { id: "style", key: "style" },
 ];
 
-/** Labels shown back to the user on the profile screen. */
-export function labelFor(list: Choice[], id: string | null): string {
-  return list.find((c) => c.id === id)?.label ?? "Not set";
+/** Which dictionary branch a list's keys sit under. */
+export type ChoiceCategory =
+  | "gender"
+  | "age"
+  | "focus"
+  | "aesthetic"
+  | "concern"
+  | "hairType"
+  | "hairLength"
+  | "skinType"
+  | "skinConcern"
+  | "dailyMinutes"
+  | "commitment"
+  | "priority";
+
+type Translate = (path: string, vars?: Vars) => string;
+
+/**
+ * Turns definitions into the labelled choices a component renders.
+ *
+ * Entries with a hint are stored as `{ label, hint }`; the rest are plain
+ * strings, which keeps the dictionaries readable rather than wrapping every
+ * one-word option in an object with a null field.
+ */
+export function resolveChoices(
+  t: Translate,
+  category: ChoiceCategory,
+  defs: { id: string; key: string; hint?: boolean }[],
+): Choice[] {
+  return defs.map((def) => ({
+    id: def.id,
+    label: t(`choices.${category}.${def.key}${def.hint ? ".label" : ""}`),
+    hint: def.hint ? t(`choices.${category}.${def.key}.hint`) : undefined,
+  }));
+}
+
+/** One label, for the profile screen reading an answer back. */
+export function labelFor(
+  t: Translate,
+  category: ChoiceCategory,
+  defs: { id: string; key: string; hint?: boolean }[],
+  id: string | null,
+): string {
+  const def = defs.find((d) => d.id === id);
+  if (!def) return t("common.notSet");
+  return t(`choices.${category}.${def.key}${def.hint ? ".label" : ""}`);
 }

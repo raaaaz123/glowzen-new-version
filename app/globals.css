@@ -358,3 +358,79 @@
 @utility animate-view {
   animation: fade 0.25s ease-in-out both;
 }
+
+/* ------------------------------------------------------------------ script
+   Inter and Nunito are Latin-only here, so Arabic and Japanese would fall
+   through to whatever the browser picks — often a face with no relationship to
+   the rest of the page. Naming the system faces each platform actually ships
+   gets a reader of those scripts the typography they expect.
+
+   Attached to `:lang()` rather than a class so it follows <html lang>, which
+   the provider keeps in step with the chosen language. */
+:root:lang(ar) {
+  --font-sans:
+    var(--font-inter), "SF Arabic", "Geeza Pro", "Noto Sans Arabic", "Segoe UI",
+    Tahoma, sans-serif;
+  /* No Arabic monospace worth having; the sans keeps the numerals consistent. */
+  --font-mono: var(--font-sans);
+}
+
+:root:lang(ja) {
+  --font-sans:
+    var(--font-inter), "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+    "Yu Gothic UI", "Noto Sans JP", "Meiryo", sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Hiragino Sans", sans-serif;
+}
+
+/* ---------------------------------------------------------------- Arabic
+   Two Latin typographic habits actively damage Arabic and have to be undone
+   wherever they appear:
+
+   - Letter-spacing pulls apart a cursive script, breaking the joins between
+     letters. What reads as "refined" in Latin reads as broken in Arabic.
+   - `text-transform: uppercase` does nothing, because Arabic has no cases —
+     but the rule stays in the cascade and costs nothing to switch off.
+
+   Negative tracking on the display face is the same problem in the other
+   direction, so the headline treatment resets to normal too. */
+:root:lang(ar) .eyebrow,
+:root:lang(ar) .sp-label,
+:root:lang(ar) .type-display,
+:root:lang(ar) [class*="tracking-"] {
+  letter-spacing: normal;
+}
+
+:root:lang(ar) .eyebrow,
+:root:lang(ar) .sp-label,
+:root:lang(ar) [class*="uppercase"] {
+  text-transform: none;
+}
+
+/* Arabic sits lower and needs more room between lines than Latin at the same
+   size — the display face's 1.06 clips descenders outright. */
+:root:lang(ar) .type-display {
+  line-height: 1.35;
+}
+
+/* ------------------------------------------------------------------- RTL
+   Most direction is handled by logical properties in the markup (`ps-`, `me-`,
+   `start-`, `text-start`). These are the cases a utility class can't reach. */
+[dir="rtl"] {
+  /* Arrows, chevrons and the compare handle are drawn pointing right. The
+     `rtl:-scale-x-100` utility flips them per icon; this covers the ones
+     rendered inside content we don't control. */
+  --flip: -1;
+}
+
+/* Shimmer sweeps across a skeleton in reading order. */
+[dir="rtl"] .animate-shimmer {
+  animation-direction: reverse;
+}
+
+/* A horizontal scroller's resting position is the reading edge, which the
+   browser handles — but a scroll-snap start would otherwise land it on the
+   wrong end. */
+[dir="rtl"] .no-scrollbar {
+  scroll-snap-type: none;
+}

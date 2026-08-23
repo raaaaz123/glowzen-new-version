@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarCheck, House, Scan, TrendingUp, UserRound } from "lucide-react";
+import { useT } from "@/lib/i18n/I18nContext";
 import { cn } from "@/lib/utils";
 
 export const NAV_ITEMS = [
-  { href: "/home", label: "Home", icon: House },
-  { href: "/analyze", label: "Analyze", icon: Scan },
-  { href: "/plan", label: "Plan", icon: CalendarCheck },
-  { href: "/progress", label: "Progress", icon: TrendingUp },
-  { href: "/profile", label: "Profile", icon: UserRound },
+  { href: "/home", labelKey: "nav.home", icon: House },
+  { href: "/analyze", labelKey: "nav.analyze", icon: Scan },
+  { href: "/plan", labelKey: "nav.plan", icon: CalendarCheck },
+  { href: "/progress", labelKey: "nav.progress", icon: TrendingUp },
+  { href: "/profile", labelKey: "nav.profile", icon: UserRound },
 ];
 
 function useActive() {
@@ -20,14 +21,15 @@ function useActive() {
 
 export function BottomNav() {
   const isActive = useActive();
+  const t = useT();
 
   return (
     <nav
-      aria-label="Main"
+      aria-label={t("nav.main")}
       className="safe-b fixed inset-x-0 bottom-0 z-50 border-t border-line bg-ink/85 backdrop-blur-2xl lg:hidden"
     >
       <ul className="shell flex items-stretch justify-between px-2 pt-2 pb-1">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+        {NAV_ITEMS.map(({ href, labelKey, icon: Icon }) => {
           const active = isActive(href);
           return (
             <li key={href} className="flex-1">
@@ -50,7 +52,7 @@ export function BottomNav() {
                     active ? "text-cream" : "text-faint",
                   )}
                 >
-                  {label}
+                  {t(labelKey)}
                 </span>
               </Link>
             </li>
@@ -63,20 +65,21 @@ export function BottomNav() {
 
 export function SideRail() {
   const isActive = useActive();
+  const t = useT();
 
   return (
-    <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col justify-between border-r border-line py-8 pr-6 lg:flex">
+    <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col justify-between border-e border-line py-8 pe-6 lg:flex">
       <div>
         <Link href="/home" className="mb-10 flex items-center gap-2.5 px-3">
           <span className="grid size-8 place-items-center rounded-xl bg-linear-to-b from-champagne-hi to-champagne text-[13px] font-semibold text-on-accent">
             G
           </span>
-          <span className="type-display text-xl">Glowzen</span>
+          <span className="type-display text-xl">{t("common.appName")}</span>
         </Link>
 
-        <nav aria-label="Main">
+        <nav aria-label={t("nav.main")}>
           <ul className="space-y-1">
-            {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+            {NAV_ITEMS.map(({ href, labelKey, icon: Icon }) => {
               const active = isActive(href);
               return (
                 <li key={href}>
@@ -95,7 +98,7 @@ export function SideRail() {
                       strokeWidth={1.8}
                       aria-hidden
                     />
-                    {label}
+                    {t(labelKey)}
                   </Link>
                 </li>
               );
@@ -104,9 +107,7 @@ export function SideRail() {
         </nav>
       </div>
 
-      <p className="px-3 text-[11px] leading-relaxed text-faint">
-        Recommendations are AI-generated suggestions, not measurements.
-      </p>
+      <p className="px-3 text-[11px] leading-relaxed text-faint">{t("common.aiShort")}</p>
     </aside>
   );
 }

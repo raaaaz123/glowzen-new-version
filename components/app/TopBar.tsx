@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
+import { useT } from "@/lib/i18n/I18nContext";
 import { cn } from "@/lib/utils";
 
 export function TopBar({
@@ -17,6 +18,7 @@ export function TopBar({
   sticky?: boolean;
 }) {
   const router = useRouter();
+  const t = useT();
 
   return (
     <header
@@ -28,10 +30,11 @@ export function TopBar({
       {back && (
         <button
           onClick={() => router.back()}
-          aria-label="Go back"
-          className="-ml-2 grid size-10 shrink-0 place-items-center rounded-full text-cream transition-colors hover:bg-raised"
+          aria-label={t("common.goBack")}
+          className="-ms-2 grid size-10 shrink-0 place-items-center rounded-full text-cream transition-colors hover:bg-raised"
         >
-          <ChevronLeft className="size-5" />
+          {/* Back points the way the reader came from, which flips with the script. */}
+          <ChevronLeft className="size-5 rtl:-scale-x-100" />
         </button>
       )}
       {title && <h1 className="flex-1 truncate text-[15px] font-medium">{title}</h1>}

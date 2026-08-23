@@ -20,7 +20,9 @@ import { ImageFrame } from "@/components/ui/ImageFrame";
 import { Sheet } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { TopBar } from "@/components/app/TopBar";
+import { LanguageRow } from "@/components/app/LanguagePicker";
 import { useGlow } from "@/lib/state/GlowContext";
+import { useT } from "@/lib/i18n/I18nContext";
 import {
   AESTHETIC_CHOICES,
   AGE_CHOICES,
@@ -42,6 +44,7 @@ type Confirm = "photos" | "account" | null;
 export default function ProfilePage() {
   const router = useRouter();
   const toast = useToast();
+  const t = useT();
   const { answers, gender, photoUrl, setPhotoUrl, reset } = useGlow();
   const [privatePhotos, setPrivatePhotos] = useState(true);
   const [notifications, setNotifications] = useState(true);
@@ -50,46 +53,57 @@ export default function ProfilePage() {
 
   const g = gender ?? "neutral";
 
+  const notSet = t("common.notSet");
+
   const prefs = [
     {
-      label: "Target aesthetic",
-      value: answers.aesthetic ? labelFor(AESTHETIC_CHOICES[g], answers.aesthetic) : "Not set",
+      label: t("profile.prefAesthetic"),
+      value: answers.aesthetic
+        ? labelFor(t, "aesthetic", AESTHETIC_CHOICES[g], answers.aesthetic)
+        : notSet,
     },
     {
-      label: "Main goal",
-      value: answers.priority ? labelFor(PRIORITY_CHOICES, answers.priority) : "Not set",
+      label: t("profile.prefGoal"),
+      value: answers.priority
+        ? labelFor(t, "priority", PRIORITY_CHOICES, answers.priority)
+        : notSet,
     },
     {
-      label: "Focus area",
-      value: answers.focus ? labelFor(FOCUS_CHOICES[g], answers.focus) : "Not set",
+      label: t("profile.prefFocus"),
+      value: answers.focus ? labelFor(t, "focus", FOCUS_CHOICES[g], answers.focus) : notSet,
     },
     {
-      label: "Biggest concern",
-      value: answers.concern ? labelFor(CONCERN_CHOICES[g], answers.concern) : "Not set",
+      label: t("profile.prefConcern"),
+      value: answers.concern
+        ? labelFor(t, "concern", CONCERN_CHOICES[g], answers.concern)
+        : notSet,
     },
     {
-      label: "Hair",
+      label: t("profile.prefHair"),
       value:
         answers.hairType && answers.hairLength
-          ? `${labelFor(HAIR_TYPE_CHOICES, answers.hairType)} · ${labelFor(HAIR_LENGTH_CHOICES[g], answers.hairLength)}`
-          : "Not set",
+          ? [
+              labelFor(t, "hairType", HAIR_TYPE_CHOICES, answers.hairType),
+              labelFor(t, "hairLength", HAIR_LENGTH_CHOICES[g], answers.hairLength),
+            ].join(" · ")
+          : notSet,
     },
     {
-      label: "Skin",
+      label: t("profile.prefSkin"),
       value: answers.skinType
         ? [
-            labelFor(SKIN_TYPE_CHOICES, answers.skinType),
+            labelFor(t, "skinType", SKIN_TYPE_CHOICES, answers.skinType),
             ...answers.skinConcerns
               .filter((c) => c !== "none")
-              .map((c) => labelFor(SKIN_CONCERN_CHOICES, c)),
+              .map((c) => labelFor(t, "skinConcern", SKIN_CONCERN_CHOICES, c)),
           ].join(" · ")
-        : "Not set",
+        : notSet,
     },
     {
-      label: "Time a day",
+      label: t("profile.prefTime"),
       value: answers.dailyMinutes
-        ? labelFor(DAILY_MINUTES_CHOICES, answers.dailyMinutes)
-        : "Not set",
+        ? labelFor(t, "dailyMinutes", DAILY_MINUTES_CHOICES, answers.dailyMinutes)
+        : notSet,
     },
   ];
 
@@ -99,16 +113,16 @@ export default function ProfilePage() {
       if (confirm === "photos") {
         await deleteAllPhotos();
         setPhotoUrl(null);
-        toast("Photos deleted.");
+        toast(t("profile.photosDeleted"));
       } else {
         await deleteAccount();
         reset();
-        toast("Account deleted.");
+        toast(t("profile.accountDeleted"));
         router.push("/");
       }
       setConfirm(null);
     } catch {
-      toast("That didn't go through. Try again.", "error");
+      toast(t("common.didntGoThrough"), "error");
     } finally {
       setBusy(false);
     }
@@ -116,7 +130,7 @@ export default function ProfilePage() {
 
   return (
     <main>
-      <TopBar back={false} title="Profile" />
+      <TopBar back={false} title={t("profile.title")} />
 
       <Card className="mt-6 flex items-center gap-4 p-5">
         {photoUrl ? (
@@ -134,22 +148,31 @@ export default function ProfilePage() {
         )}
         <div className="min-w-0">
           <h1 className="type-display text-[1.7rem]">
-            {answers.aesthetic ? labelFor(AESTHETIC_CHOICES[g], answers.aesthetic) : "Your profile"}
+            {answers.aesthetic
+              ? labelFor(t, "aesthetic", AESTHETIC_CHOICES[g], answers.aesthetic)
+              : t("profile.yourProfile")}
           </h1>
           <p className="mt-0.5 text-[13.5px] text-champagne">
-            {answers.ageRange ? `${labelFor(AGE_CHOICES, answers.ageRange)} · ` : ""}
-            {g === "neutral" ? "Neutral recommendations" : `${g[0].toUpperCase()}${g.slice(1)}`}
+            {answers.ageRange ? `${labelFor(t, "age", AGE_CHOICES, answers.ageRange)} · ` : ""}
+            {/* Capitalising `g` in place only ever worked because the values are
+                English words. The dictionary carries all three properly. */}
+            {g === "neutral"
+              ? t("profile.neutralRecommendations")
+              : t(`profile.genderLabel.${g}`)}
           </p>
         </div>
       </Card>
 
       <section className="mt-8">
-        <SectionHeader eyebrow="From your questionnaire" title="Preferences" />
+        <SectionHeader
+          eyebrow={t("profile.fromQuestionnaire")}
+          title={t("profile.preferences")}
+        />
         <Card className="divide-y divide-line">
           {prefs.map((p) => (
             <div key={p.label} className="flex items-center justify-between gap-4 px-5 py-4">
               <span className="text-[14px] text-muted">{p.label}</span>
-              <span className="text-right text-[14px] text-cream">{p.value}</span>
+              <span className="text-end text-[14px] text-cream">{p.value}</span>
             </div>
           ))}
         </Card>
@@ -162,74 +185,101 @@ export default function ProfilePage() {
           onClick={() => router.push("/questionnaire")}
         >
           <Pencil className="size-4" aria-hidden />
-          Edit preferences
+          {t("profile.editPreferences")}
         </Button>
       </section>
 
       <section className="mt-8">
-        <SectionHeader eyebrow="Control" title="Privacy & notifications" />
+        <SectionHeader
+          eyebrow={t("profile.control")}
+          title={t("profile.privacyAndNotifications")}
+        />
         <Card className="divide-y divide-line">
+          {/* Language sits with the other things the user controls about the
+              app, above privacy, because it changes everything below it. */}
+          <LanguageRow />
           <Toggle
             icon={Lock}
-            label="Keep my photos private"
-            body="Photos are never used for anything but your own analysis."
+            label={t("profile.keepPrivate")}
+            body={t("profile.keepPrivateBody")}
             on={privatePhotos}
             onChange={(v) => {
               setPrivatePhotos(v);
-              toast(v ? "Photos kept private." : "Photo privacy turned off.", "info");
+              toast(t(v ? "profile.privateOn" : "profile.privateOff"), "info");
             }}
           />
           <Toggle
             icon={Bell}
-            label="Plan reminders"
-            body="One nudge a week while your 30-day plan runs."
+            label={t("profile.reminders")}
+            body={t("profile.remindersBody")}
             on={notifications}
             onChange={(v) => {
               setNotifications(v);
-              toast(v ? "Reminders on." : "Reminders off.", "info");
+              toast(t(v ? "profile.remindersOn" : "profile.remindersOff"), "info");
             }}
           />
         </Card>
       </section>
 
       <section className="mt-8 mb-2">
-        <SectionHeader eyebrow="Your data" title="Manage" />
+        <SectionHeader eyebrow={t("profile.yourData")} title={t("profile.manage")} />
         <Card className="divide-y divide-line">
-          <Row icon={ShieldCheck} label="Privacy policy" onClick={() => toast("Policy page isn't in this prototype.", "info")} />
-          <Row icon={FileText} label="Terms of use" onClick={() => toast("Terms page isn't in this prototype.", "info")} />
-          <Row icon={ImageOff} label="Delete my photos" onClick={() => setConfirm("photos")} />
-          <Row icon={Trash2} label="Delete my account" tone="danger" onClick={() => setConfirm("account")} />
+          <Row
+            icon={ShieldCheck}
+            label={t("profile.privacyPolicy")}
+            onClick={() => toast(t("profile.policyNotInPrototype"), "info")}
+          />
+          <Row
+            icon={FileText}
+            label={t("profile.termsOfUse")}
+            onClick={() => toast(t("profile.termsNotInPrototype"), "info")}
+          />
+          <Row
+            icon={ImageOff}
+            label={t("profile.deletePhotos")}
+            onClick={() => setConfirm("photos")}
+          />
+          <Row
+            icon={Trash2}
+            label={t("profile.deleteAccount")}
+            tone="danger"
+            onClick={() => setConfirm("account")}
+          />
         </Card>
 
-        <p className="mt-5 text-[11.5px] leading-relaxed text-faint">
-          Recommendations are AI-generated suggestions, not measurements or medical advice.
-        </p>
+        <p className="mt-5 text-[11.5px] leading-relaxed text-faint">{t("profile.disclaimer")}</p>
       </section>
 
       <Sheet
         open={confirm !== null}
         onClose={() => !busy && setConfirm(null)}
-        title={confirm === "account" ? "Delete your account?" : "Delete your photos?"}
-        description={
+        title={t(
           confirm === "account"
-            ? "This removes your profile, analyses and plan. It can't be undone."
-            : "Your analyses stay, but the photos behind them are removed."
-        }
+            ? "profile.confirmAccountTitle"
+            : "profile.confirmPhotosTitle",
+        )}
+        description={t(
+          confirm === "account"
+            ? "profile.confirmAccountDescription"
+            : "profile.confirmPhotosDescription",
+        )}
         footer={
           <div className="flex gap-3">
             <Button variant="secondary" className="flex-1" onClick={() => setConfirm(null)} disabled={busy}>
-              Keep it
+              {t("profile.keepIt")}
             </Button>
             <Button variant="danger" className="flex-1" loading={busy} onClick={runConfirm}>
-              Delete
+              {t("common.delete")}
             </Button>
           </div>
         }
       >
         <p className="pb-2 text-[13.5px] leading-relaxed text-muted">
-          {confirm === "account"
-            ? "You can start again from the welcome screen at any time."
-            : "You'll need a new photo before your next analysis."}
+          {t(
+            confirm === "account"
+              ? "profile.confirmAccountBody"
+              : "profile.confirmPhotosBody",
+          )}
         </p>
       </Sheet>
     </main>
@@ -250,7 +300,7 @@ function Row({
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-3.5 px-5 py-4 text-left transition-colors hover:bg-cream/[.03]"
+      className="flex w-full items-center gap-3.5 px-5 py-4 text-start transition-colors hover:bg-cream/[.03]"
     >
       <Icon
         className={cn("size-[17px] shrink-0", tone === "danger" ? "text-danger" : "text-muted")}
@@ -259,7 +309,7 @@ function Row({
       <span className={cn("flex-1 text-[14.5px]", tone === "danger" ? "text-danger" : "text-cream")}>
         {label}
       </span>
-      <ChevronRight className="size-4 shrink-0 text-faint" aria-hidden />
+      <ChevronRight className="size-4 shrink-0 text-faint rtl:-scale-x-100" aria-hidden />
     </button>
   );
 }
@@ -297,7 +347,8 @@ function Toggle({
         <span
           className={cn(
             "block size-5 rounded-full bg-ink transition-transform duration-200",
-            on ? "translate-x-5" : "translate-x-0",
+            // The knob travels toward the end of the row, whichever side that is.
+            on ? "translate-x-5 rtl:-translate-x-5" : "translate-x-0",
           )}
         />
       </button>

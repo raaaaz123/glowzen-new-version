@@ -7,6 +7,7 @@ import {
   buildAnalysisSchema,
   buildPrompt,
 } from "@/lib/server/analysisPrompt";
+import { requestLocale, serverT } from "@/lib/server/i18n";
 import type { QuestionnaireAnswers } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -20,40 +21,49 @@ const clamp = (n: unknown, lo = 0, hi = 100) =>
   Math.min(hi, Math.max(lo, Math.round(Number(n) || 0)));
 
 export async function POST(request: Request) {
-  let uid: string;
-  try {
-    ({ uid } = await requireUser(request));
-  } catch (error) {
-    return fail(error instanceof AuthError ? error.message : "Unauthorized.", 401);
-  }
-
-  // Each analysis is a paid vision call, so the ceiling is deliberately low.
-  if (!rateLimit(`analysis:${uid}`, 8, 60 * 60_000)) {
-    return fail("You've run a lot of analyses this hour. Try again later.", 429);
-  }
-
-  if (!isGeminiConfigured || !isR2Configured) {
-    return fail("Analysis isn't configured on this server.", 503, "not_configured");
-  }
-
+  // The body is read first so its `locale` can carry every message below —
+  // including the ones that fire before we have looked at anything else.
   const body = (await request.json().catch(() => null)) as {
     photoKey?: unknown;
     answers?: Partial<QuestionnaireAnswers>;
     wantsMakeup?: boolean;
     wantsBeard?: boolean;
+    locale?: unknown;
   } | null;
+
+  const locale = requestLocale(request, body ?? undefined);
+  const t = serverT(locale);
+
+  let uid: string;
+  try {
+    ({ uid } = await requireUser(request));
+  } catch (error) {
+    // The specific reason — no token, expired token, unconfigured project — is
+    // a server detail. The caller gets one translated line either way.
+    if (!(error instanceof AuthError)) console.error("[glowzen] Auth failed:", error);
+    return fail(t("server.unauthorized"), 401);
+  }
+
+  // Each analysis is a paid vision call, so the ceiling is deliberately low.
+  if (!rateLimit(`analysis:${uid}`, 8, 60 * 60_000)) {
+    return fail(t("server.rateAnalysis"), 429);
+  }
+
+  if (!isGeminiConfigured || !isR2Configured) {
+    return fail(t("server.notConfiguredAnalysis"), 503, "not_configured");
+  }
 
   const wantsMakeup = body?.wantsMakeup === true;
   const wantsBeard = body?.wantsBeard === true;
 
   const photoKey = typeof body?.photoKey === "string" ? body.photoKey : "";
-  if (!ownsKey(uid, photoKey)) return fail("We couldn't find that photo.", 404);
+  if (!ownsKey(uid, photoKey)) return fail(t("server.photoNotFound"), 404);
 
   let photo: { bytes: Uint8Array; contentType: string };
   try {
     photo = await getObjectBytes(photoKey);
   } catch {
-    return fail("We couldn't read your photo. Try uploading it again.", 404);
+    return fail(t("server.photoUnreadable"), 404);
   }
 
   let parsed: Record<string, unknown>;
@@ -70,7 +80,7 @@ export async function POST(request: Request) {
                 data: Buffer.from(photo.bytes).toString("base64"),
               },
             },
-            { text: buildPrompt(body?.answers ?? {}, wantsMakeup, wantsBeard) },
+            { text: buildPrompt(body?.answers ?? {}, wantsMakeup, wantsBeard, locale) },
           ],
         },
       ],
@@ -92,18 +102,20 @@ export async function POST(request: Request) {
     const isModel = /not found|not supported|404|model/i.test(detail);
     return fail(
       isModel
-        ? `The model "${GEMINI_MODEL}" didn't accept that request. Check GEMINI_MODEL in .env.local.`
-        : "The analysis didn't come back. Try again in a moment.",
+        ? t("server.badModel", { model: GEMINI_MODEL })
+        : t("server.analysisUpstream"),
       502,
       isModel ? "bad_model" : "upstream",
     );
   }
 
   if (parsed.usable === false) {
+    // The model was told to write in the user's language, so its own
+    // explanation of what to retake already is — prefer it over ours.
     return fail(
       typeof parsed.issue === "string" && parsed.issue
         ? parsed.issue
-        : "That photo wasn't clear enough to read. Try one facing the camera in better light.",
+        : t("server.unusablePhoto"),
       422,
       "unusable_photo",
     );
@@ -115,7 +127,7 @@ export async function POST(request: Request) {
   const hairstyles = Array.isArray(parsed.hairstyles) ? parsed.hairstyles.slice(0, 3) : [];
 
   if (opportunities.length < 3 || hairstyles.length < 3) {
-    return fail("The analysis came back incomplete. Try again.", 502, "incomplete");
+    return fail(t("server.analysisIncomplete"), 502, "incomplete");
   }
 
   const makeup = wantsMakeup && parsed.makeup ? normaliseMakeup(parsed.makeup) : undefined;

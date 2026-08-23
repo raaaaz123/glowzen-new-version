@@ -2,6 +2,7 @@ import { AuthError, requireUser } from "@/lib/server/auth";
 import { rateLimit } from "@/lib/server/rateLimit";
 import { GEMINI_MODEL, gemini, isGeminiConfigured } from "@/lib/server/gemini";
 import { PLAN_SCHEMA, PLAN_SYSTEM_INSTRUCTION, buildPlanPrompt } from "@/lib/server/analysisPrompt";
+import { requestLocale, serverT } from "@/lib/server/i18n";
 import type { QuestionnaireAnswers } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -21,27 +22,34 @@ const str = (v: unknown, max = 400) => (typeof v === "string" ? v.slice(0, max) 
  * lets the report land while the plan is still being written.
  */
 export async function POST(request: Request) {
-  let uid: string;
-  try {
-    ({ uid } = await requireUser(request));
-  } catch (error) {
-    return fail(error instanceof AuthError ? error.message : "Unauthorized.", 401);
-  }
-
-  if (!rateLimit(`plan:${uid}`, 12, 60 * 60_000)) {
-    return fail("You've rebuilt your plan a lot this hour. Try again later.", 429);
-  }
-
-  if (!isGeminiConfigured) {
-    return fail("Plans aren't configured on this server.", 503, "not_configured");
-  }
-
   const body = (await request.json().catch(() => null)) as {
     answers?: Partial<QuestionnaireAnswers>;
     summary?: unknown;
     opportunities?: unknown;
     topHairstyle?: { name?: unknown; maintenance?: unknown };
+    locale?: unknown;
   } | null;
+
+  const locale = requestLocale(request, body ?? undefined);
+  const t = serverT(locale);
+
+  let uid: string;
+  try {
+    ({ uid } = await requireUser(request));
+  } catch (error) {
+    // The specific reason — no token, expired token, unconfigured project — is
+    // a server detail. The caller gets one translated line either way.
+    if (!(error instanceof AuthError)) console.error("[glowzen] Auth failed:", error);
+    return fail(t("server.unauthorized"), 401);
+  }
+
+  if (!rateLimit(`plan:${uid}`, 12, 60 * 60_000)) {
+    return fail(t("server.ratePlan"), 429);
+  }
+
+  if (!isGeminiConfigured) {
+    return fail(t("server.notConfiguredPlan"), 503, "not_configured");
+  }
 
   const opportunities = (Array.isArray(body?.opportunities) ? body.opportunities : [])
     .slice(0, 3)
@@ -55,7 +63,7 @@ export async function POST(request: Request) {
     })
     .filter((o) => o.title);
 
-  if (!opportunities.length) return fail("There's no analysis to build a plan from.", 400);
+  if (!opportunities.length) return fail(t("server.noAnalysisForPlan"), 400);
 
   let parsed: Record<string, unknown>;
   try {
@@ -76,6 +84,7 @@ export async function POST(request: Request) {
                       maintenance: str(body.topHairstyle.maintenance, 120),
                     }
                   : undefined,
+                locale,
               }),
             },
           ],
@@ -97,16 +106,14 @@ export async function POST(request: Request) {
     console.error("[glowzen] Gemini plan failed:", detail);
     const isModel = /not found|not supported|404|model/i.test(detail);
     return fail(
-      isModel
-        ? `The model "${GEMINI_MODEL}" didn't accept that request. Check GEMINI_MODEL in .env.local.`
-        : "Your plan didn't come back. Try again in a moment.",
+      isModel ? t("server.badModel", { model: GEMINI_MODEL }) : t("server.planUpstream"),
       502,
       isModel ? "bad_model" : "upstream",
     );
   }
 
-  const plan = normalisePlan(parsed);
-  if (!plan) return fail("The plan came back incomplete. Try again.", 502, "incomplete");
+  const plan = normalisePlan(parsed, t("server.planFallbackTitle"));
+  if (!plan) return fail(t("server.planIncomplete"), 502, "incomplete");
 
   return Response.json({ plan });
 }
@@ -114,7 +121,7 @@ export async function POST(request: Request) {
 const WHEN = new Set(["am", "pm", "weekly"]);
 
 /** The plan drives eight weeks of UI, so shape it strictly before trusting it. */
-function normalisePlan(input: unknown) {
+function normalisePlan(input: unknown, fallbackTitle: string) {
   const p = input as Record<string, unknown> | undefined;
   if (!p) return undefined;
 
@@ -165,7 +172,7 @@ function normalisePlan(input: unknown) {
     .sort((a, b) => a.day - b.day);
 
   return {
-    title: String(p.title ?? "Your glow-up plan"),
+    title: String(p.title ?? fallbackTitle),
     subtitle: String(p.subtitle ?? ""),
     weeks,
     habits,

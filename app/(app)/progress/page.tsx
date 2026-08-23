@@ -12,22 +12,24 @@ import { TopBar } from "@/components/app/TopBar";
 import { CompareSlider } from "@/components/glow/CompareSlider";
 import { useAsync } from "@/lib/useAsync";
 import { useGlow } from "@/lib/state/GlowContext";
+import { useT } from "@/lib/i18n/I18nContext";
 import { getPlan, getProgress } from "@/services/progressService";
 import { cn } from "@/lib/utils";
 
 export default function ProgressPage() {
   const router = useRouter();
+  const t = useT();
   const { gender } = useGlow();
   const { data, loading, error, empty, reload } = useAsync(() => getProgress(gender), [gender]);
   const plan = useAsync(() => getPlan(gender), [gender]);
 
   return (
     <main>
-      <TopBar back={false} title="Your Progress" />
+      <TopBar back={false} title={t("progress.title")} />
 
       {empty && (
         <div className="mt-8">
-          <NothingYet empty={empty} title="No progress to show yet" />
+          <NothingYet empty={empty} title={t("progress.emptyTitle")} />
         </div>
       )}
 
@@ -82,7 +84,7 @@ export default function ProgressPage() {
           <div className="mt-10 min-w-0 lg:mt-6">
             <Card tone="linen" className="p-6">
               <p className="font-mono text-[10px] tracking-[0.18em] text-black/45 uppercase">
-                30 days in
+                {t("progress.thirtyDaysIn")}
               </p>
               <p className="type-display mt-3 text-[1.7rem] leading-[1.15]">
                 {data.headline}
@@ -92,8 +94,8 @@ export default function ProgressPage() {
             {plan.data && (
               <section className="mt-8">
                 <SectionHeader
-                  eyebrow="One photo a week, for eight weeks"
-                  title="Check-ins"
+                  eyebrow={t("progress.checkInsEyebrow")}
+                  title={t("progress.checkIns")}
                   action={
                     <span className="font-mono text-[11px] text-faint">
                       {plan.data.checkIns.filter((c) => c.state === "done").length}/8
@@ -133,14 +135,13 @@ export default function ProgressPage() {
                   ))}
                 </div>
                 <p className="mt-3 text-[11.5px] leading-relaxed text-faint">
-                  Same spot, same light, same angle. Eight frames is what turns a change you can
-                  argue about into one you can see.
+                  {t("progress.checkInsNote")}
                 </p>
               </section>
             )}
 
             <section className="mt-8">
-              <SectionHeader eyebrow="Movement" title="What changed" />
+              <SectionHeader eyebrow={t("progress.movement")} title={t("progress.whatChanged")} />
               <Card className="space-y-5 p-5">
                 {data.metrics.map((m) => {
                   const delta = m.to - m.from;
@@ -153,7 +154,7 @@ export default function ProgressPage() {
                             {m.from} → {m.to}
                           </span>
                           <span className="flex items-center gap-0.5 text-sage">
-                            <ArrowUpRight className="size-3" aria-hidden />
+                            <ArrowUpRight className="size-3 rtl:-scale-x-100" aria-hidden />
                             {delta}
                           </span>
                         </span>
@@ -162,7 +163,7 @@ export default function ProgressPage() {
                         <ImpactMeter value={m.to} />
                         <span
                           className="absolute top-1/2 h-3 w-px -translate-y-1/2 bg-cream/40"
-                          style={{ left: `${m.from}%` }}
+                          style={{ insetInlineStart: `${m.from}%` }}
                           aria-hidden
                         />
                       </div>
@@ -170,19 +171,18 @@ export default function ProgressPage() {
                   );
                 })}
                 <p className="text-[11.5px] leading-relaxed text-faint">
-                  The thin marker shows where you started. Figures are AI-generated estimates from
-                  your photos.
+                  {t("progress.metricsNote")}
                 </p>
               </Card>
             </section>
 
             <section className="mt-8">
-              <SectionHeader eyebrow="Timeline" title="How you got here" />
+              <SectionHeader eyebrow={t("progress.timeline")} title={t("progress.howYouGotHere")} />
               <ol className="space-y-0">
                 {data.timeline.map((item, i) => (
-                  <li key={item.label} className="relative flex gap-4 pb-6 pl-1 last:pb-0">
+                  <li key={item.label} className="relative flex gap-4 pb-6 ps-1 last:pb-0">
                     {i < data.timeline.length - 1 && (
-                      <span className="absolute top-6 bottom-0 left-[10px] w-px bg-line" aria-hidden />
+                      <span className="absolute top-6 bottom-0 start-[10px] w-px bg-line" aria-hidden />
                     )}
                     <span
                       className={cn(
@@ -210,7 +210,7 @@ export default function ProgressPage() {
 
             <Button fullWidth className="mt-6 mb-2" onClick={() => router.push("/upload")}>
               <Camera className="size-4" aria-hidden />
-              Rescan my face
+              {t("progress.rescan")}
             </Button>
           </div>
         </div>

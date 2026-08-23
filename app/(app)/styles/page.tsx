@@ -17,10 +17,12 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { ErrorState, NothingYet } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
 import { TopBar } from "@/components/app/TopBar";
+import { Paywall, PaywallPrompt } from "@/components/app/Paywall";
 import { CompareSlider } from "@/components/glow/CompareSlider";
 import { PreviewPending } from "@/components/glow/PreviewPending";
 import { useAsync } from "@/lib/useAsync";
 import { useGlow } from "@/lib/state/GlowContext";
+import { useT } from "@/lib/i18n/I18nContext";
 import { stylistWord } from "@/lib/copy";
 import {
   generatePreview,
@@ -33,8 +35,10 @@ import { cn } from "@/lib/utils";
 
 export default function StylesPage() {
   const toast = useToast();
-  const { gender, photoUrl, photoKey, hydrated, savedStyleId, setSavedStyleId } = useGlow();
+  const t = useT();
+  const { gender, photoUrl, photoKey, hydrated, savedStyleId, setSavedStyleId, isSubscribed } = useGlow();
   const { data: styles, loading, error, empty, reload } = useAsync(() => getHairstyles(gender), [gender]);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [preview, setPreview] = useState<TransformationResult | null>(null);
@@ -57,7 +61,7 @@ export default function StylesPage() {
     };
   }, [hydrated, photoKey]);
 
-  const stylist = stylistWord(gender);
+  const stylist = stylistWord(t, gender);
 
   const run = useCallback(
     async (styleId: string) => {
@@ -69,12 +73,12 @@ export default function StylesPage() {
         // It's stored now, so coming back to it later is free.
         setSaved((prev) => (prev.has(styleId) ? prev : new Set(prev).add(styleId)));
       } catch (e) {
-        setPreviewError(e instanceof Error ? e.message : "That preview didn't render.");
+        setPreviewError(e instanceof Error ? e.message : t("styles.renderFailed"));
       } finally {
         setGenerating(false);
       }
     },
-    [gender, photoKey],
+    [gender, photoKey, t],
   );
 
   // Lead with the strongest match so the screen is never empty. Waits for
@@ -91,9 +95,9 @@ export default function StylesPage() {
     try {
       await saveStyle(active.id);
       setSavedStyleId(active.id);
-      toast(`${active.name} saved to your plan.`);
+      toast(t("styles.savedToast", { name: active.name }));
     } catch {
-      toast("We couldn't save that style. Try again.", "error");
+      toast(t("styles.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -101,13 +105,22 @@ export default function StylesPage() {
 
   return (
     <main>
-      <TopBar title="Find your best hairstyle" />
+      <TopBar title={t("styles.title")} />
 
-      <p className="mt-6 max-w-md text-[15px] leading-relaxed text-muted">
-        Drag the line to see the change on your own photo before you commit to it.
-      </p>
+      <p className="mt-6 max-w-md text-[15px] leading-relaxed text-muted">{t("styles.intro")}</p>
 
-      <div className="lg:mt-6 lg:grid lg:grid-cols-[1fr_380px] lg:items-start lg:gap-10">
+      {!isSubscribed && (
+        <>
+          <PaywallPrompt
+            onOpen={() => setPaywallOpen(true)}
+            message={t("paywall.lockedStyles")}
+          />
+          <Paywall open={paywallOpen} onClose={() => setPaywallOpen(false)} />
+        </>
+      )}
+
+      {isSubscribed && (
+        <div className="lg:mt-6 lg:grid lg:grid-cols-[1fr_380px] lg:items-start lg:gap-10">
         {/* ——— preview */}
         <div className="mt-6 lg:sticky lg:top-6 lg:mt-0">
           {previewError && <ErrorState message={previewError} onRetry={() => activeId && run(activeId)} />}
@@ -118,7 +131,7 @@ export default function StylesPage() {
               <div className="absolute inset-0 grid place-items-center">
                 <div className="flex items-center gap-2.5 rounded-full bg-ink/70 px-4 py-2.5 text-[13px] backdrop-blur-md">
                   <Loader2 className="size-3.5 animate-spin text-champagne" aria-hidden />
-                  Rendering your preview…
+                  {t("styles.rendering")}
                 </div>
               </div>
             </div>
@@ -131,7 +144,7 @@ export default function StylesPage() {
               ) : (
                 <PreviewPending
                   photo={photoUrl}
-                  styleName={active?.name ?? "this style"}
+                  styleName={active?.name ?? t("styles.thisStyle")}
                   notes={active?.barberNotes ?? ""}
                   stylistWord={stylist}
                 />
@@ -145,8 +158,8 @@ export default function StylesPage() {
                     href={`/styles/${active.id}`}
                     className="inline-flex items-center gap-1.5 text-[13px] text-champagne underline-offset-4 hover:underline"
                   >
-                    Full details
-                    <ArrowUpRight className="size-3.5" aria-hidden />
+                    {t("styles.fullDetails")}
+                    <ArrowUpRight className="size-3.5 rtl:-scale-x-100" aria-hidden />
                   </Link>
                 )}
               </div>
@@ -161,12 +174,12 @@ export default function StylesPage() {
                 {savedStyleId === active?.id ? (
                   <>
                     <Check className="size-4" aria-hidden />
-                    Saved to your plan
+                    {t("styles.savedToPlan")}
                   </>
                 ) : (
                   <>
                     <Heart className="size-4" aria-hidden />
-                    This is my favorite
+                    {t("styles.favorite")}
                   </>
                 )}
               </Button>
@@ -176,9 +189,9 @@ export default function StylesPage() {
 
         {/* ——— options */}
         <div className="mt-10 lg:mt-0">
-          <p className="eyebrow mb-4">Three shapes matched to your face</p>
+          <p className="eyebrow mb-4">{t("styles.threeShapes")}</p>
 
-          {empty && <NothingYet empty={empty} title="Your matches land here" />}
+          {empty && <NothingYet empty={empty} title={t("styles.emptyTitle")} />}
 
           {error && <ErrorState message={error} onRetry={reload} />}
 
@@ -215,7 +228,7 @@ export default function StylesPage() {
                       <div className="grid aspect-square w-24 shrink-0 place-items-center rounded-2xl border border-line bg-raised text-center">
                         <div>
                           <p className="type-display text-[1.5rem] text-champagne">{style.match}</p>
-                          <p className="eyebrow mt-0.5 text-[8px]">Match</p>
+                          <p className="eyebrow mt-0.5 text-[8px]">{t("styles.matchLabel")}</p>
                         </div>
                       </div>
                     )}
@@ -238,17 +251,17 @@ export default function StylesPage() {
                           {isActive && !generating ? (
                             <>
                               <Check className="size-3.5" aria-hidden />
-                              Showing
+                              {t("styles.showing")}
                             </>
                           ) : isSaved ? (
                             <>
                               <ImageIcon className="size-3.5" aria-hidden />
-                              View saved
+                              {t("styles.viewSaved")}
                             </>
                           ) : (
                             <>
                               <Sparkles className="size-3.5" aria-hidden />
-                              Preview
+                              {t("styles.preview")}
                             </>
                           )}
                         </Button>
@@ -256,7 +269,7 @@ export default function StylesPage() {
                           href={`/styles/${style.id}`}
                           className="text-[12.5px] text-muted underline-offset-4 hover:text-cream hover:underline"
                         >
-                          Details
+                          {t("styles.details")}
                         </Link>
                       </div>
                     </div>
@@ -267,11 +280,11 @@ export default function StylesPage() {
           </div>
 
           <p className="mt-5 text-[11.5px] leading-relaxed text-faint">
-            Previews are illustrative. Bring the detail page to your {stylist} — the
-            notes matter more than the picture.
+            {t("styles.previewsNote", { stylist })}
           </p>
         </div>
       </div>
+      )}
     </main>
   );
 }

@@ -15,6 +15,7 @@ import {
   type PreviewGender,
   type PreviewKind,
 } from "@/lib/server/previewPrompt";
+import { requestLocale, serverT } from "@/lib/server/i18n";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -35,29 +36,35 @@ const text = (v: unknown, max: number) =>
  * prefix and served through the existing signed-URL route.
  */
 export async function POST(request: Request) {
-  let uid: string;
-  try {
-    ({ uid } = await requireUser(request));
-  } catch (error) {
-    return fail(error instanceof AuthError ? error.message : "Unauthorized.", 401);
-  }
-
-  // Image generation is the most expensive call in the app by a wide margin.
-  if (!rateLimit(`preview:${uid}`, 20, 60 * 60_000)) {
-    return fail("You've generated a lot of previews this hour. Try again later.", 429);
-  }
-
-  if (!isGeminiConfigured || !isR2Configured) {
-    return fail("Previews aren't configured on this server.", 503, "not_configured");
-  }
-
   const body = (await request.json().catch(() => null)) as {
     photoKey?: unknown;
     kind?: unknown;
     detail?: unknown;
     notes?: unknown;
     gender?: unknown;
+    locale?: unknown;
   } | null;
+
+  const t = serverT(requestLocale(request, body ?? undefined));
+
+  let uid: string;
+  try {
+    ({ uid } = await requireUser(request));
+  } catch (error) {
+    // The specific reason — no token, expired token, unconfigured project — is
+    // a server detail. The caller gets one translated line either way.
+    if (!(error instanceof AuthError)) console.error("[glowzen] Auth failed:", error);
+    return fail(t("server.unauthorized"), 401);
+  }
+
+  // Image generation is the most expensive call in the app by a wide margin.
+  if (!rateLimit(`preview:${uid}`, 20, 60 * 60_000)) {
+    return fail(t("server.ratePreview"), 429);
+  }
+
+  if (!isGeminiConfigured || !isR2Configured) {
+    return fail(t("server.notConfiguredPreview"), 503, "not_configured");
+  }
 
   const kind: PreviewKind =
     body?.kind === "makeup" ? "makeup" : body?.kind === "beard" ? "beard" : "hairstyle";
@@ -67,16 +74,16 @@ export async function POST(request: Request) {
     body?.gender === "male" || body?.gender === "female" ? body.gender : null;
   const detail = text(body?.detail, 300);
   const notes = text(body?.notes, 300);
-  if (!detail) return fail("Nothing to render.", 400);
+  if (!detail) return fail(t("server.nothingToRender"), 400);
 
   const photoKey = text(body?.photoKey, 200);
-  if (!ownsKey(uid, photoKey)) return fail("We couldn't find that photo.", 404);
+  if (!ownsKey(uid, photoKey)) return fail(t("server.photoNotFound"), 404);
 
   let photo: { bytes: Uint8Array; contentType: string };
   try {
     photo = await getObjectBytes(photoKey);
   } catch {
-    return fail("We couldn't read your photo. Try uploading it again.", 404);
+    return fail(t("server.photoUnreadable"), 404);
   }
 
   let image: { bytes: Uint8Array; mimeType: string } | null = null;
@@ -115,8 +122,8 @@ export async function POST(request: Request) {
     const isModel = /not found|not supported|404|model/i.test(detailMsg);
     return fail(
       isModel
-        ? `The model "${GEMINI_IMAGE_MODEL}" didn't accept that request. Check GEMINI_IMAGE_MODEL in .env.local.`
-        : "That preview didn't render. Try again in a moment.",
+        ? t("server.badModel", { model: GEMINI_IMAGE_MODEL })
+        : t("server.previewUpstream"),
       502,
       isModel ? "bad_model" : "upstream",
     );
@@ -125,7 +132,7 @@ export async function POST(request: Request) {
   // The model can decline to return an image — usually a safety refusal. Say so
   // rather than showing the user a broken frame or someone else's face.
   if (!image) {
-    return fail("That preview didn't render. Try a different photo or style.", 422, "no_image");
+    return fail(t("server.previewNoImage"), 422, "no_image");
   }
 
   const ext = image.mimeType === "image/jpeg" ? "jpg" : image.mimeType === "image/webp" ? "webp" : "png";
@@ -134,7 +141,7 @@ export async function POST(request: Request) {
     await putObjectBytes(key, image.bytes, image.mimeType);
   } catch (error) {
     console.error("[glowzen] Preview upload failed:", error);
-    return fail("We rendered it but couldn't save it. Try again.", 502, "storage");
+    return fail(t("server.previewStorage"), 502, "storage");
   }
 
   return Response.json({ key });

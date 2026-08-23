@@ -16,6 +16,7 @@ import { getAnalyses, scanPhoto } from "./analysisService";
 import { getIdToken } from "@/lib/firebase/auth";
 import { getUserDoc } from "./userService";
 import { EmptyError } from "@/lib/emptyError";
+import { getRuntimeLocale, st, stShortDate } from "@/lib/i18n/runtime";
 
 interface PlanDoc {
   /** taskId → completed. Overlays the generated plan. */
@@ -36,13 +37,13 @@ const EMPTY_PLAN_DOC: PlanDoc = {
 
 const DAY = 24 * 60 * 60_000;
 
-const shortDate = (d: Date) =>
-  d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+/** Follows the chosen language, not the browser's. */
+const shortDate = (d: Date) => stShortDate(d);
 
 /** Thrown when there's no analysis yet — the caller shows an empty state. */
 export class NoPlanError extends EmptyError {
-  constructor(message = "Run an analysis first and your plan gets built from it.") {
-    super(message, { label: "Start your analysis", href: "/analyze" });
+  constructor(message = st("errors.noPlan")) {
+    super(message, { label: st("errors.startYourAnalysis"), href: "/analyze" });
   }
 }
 
@@ -108,10 +109,10 @@ export async function getPlan(gender: Gender | null): Promise<GlowPlan> {
     const due = startedAt ? new Date(startedAt.getTime() + (w.week - 1) * 7 * DAY) : null;
     return {
       week: w.week,
-      label: `Week ${w.week}`,
+      label: st("common.week", { week: w.week }),
       photoKey: null,
       photo: null,
-      dateLabel: due ? shortDate(due) : "Not started",
+      dateLabel: due ? shortDate(due) : st("plan.notStarted"),
       state:
         currentWeek === 0
           ? "upcoming"
@@ -138,7 +139,9 @@ export async function getPlan(gender: Gender | null): Promise<GlowPlan> {
     id: `plan_${analysis.id}`,
     title: template.title,
     subtitle: template.subtitle,
-    startedLabel: startedAt ? `Started ${shortDate(startedAt)}` : "Not started yet",
+    startedLabel: startedAt
+      ? st("plan.startedOn", { date: shortDate(startedAt) })
+      : st("plan.notStartedYet"),
     weeks,
     habits,
     checkIns,
@@ -166,11 +169,8 @@ export async function startPlan() {
 
 /** Thrown when there aren't two scans yet, so there is nothing to compare. */
 export class NotEnoughScansError extends EmptyError {
-  constructor(
-    message = "Take a second photo and this compares it against your first.",
-    readonly scans = 0,
-  ) {
-    super(message, { label: "Take a new scan", href: "/analyze" });
+  constructor(message = st("errors.notEnoughScans"), readonly scans = 0) {
+    super(message, { label: st("errors.takeNewScan"), href: "/analyze" });
   }
 }
 
@@ -198,8 +198,8 @@ export async function getProgress(_gender: Gender | null): Promise<ProgressRepor
   // URL from the day the scan ran, so rendering it straight gives two dead
   // frames on every visit more than ten minutes after the analysis.
   const [beforeSnap, afterSnap] = await Promise.all([
-    snapshot(before, "First scan"),
-    snapshot(after, "Latest scan"),
+    snapshot(before, st("progress.firstScan")),
+    snapshot(after, st("progress.latestScan")),
   ]);
 
   const moved = metrics.reduce((sum, m) => sum + (m.to - m.from), 0);
@@ -212,8 +212,8 @@ export async function getProgress(_gender: Gender | null): Promise<ProgressRepor
     completion: totalTasks ? Math.round((doneCount / totalTasks) * 100) : 0,
     headline:
       moved > 0
-        ? `Your scores are up ${moved} points across ${metrics.length} areas.`
-        : "Here's how your latest scan compares to your first.",
+        ? st("progress.scoresUp", { points: moved, areas: metrics.length })
+        : st("progress.comparison"),
     metrics,
     before: beforeSnap,
     after: afterSnap,
@@ -221,7 +221,7 @@ export async function getProgress(_gender: Gender | null): Promise<ProgressRepor
       .slice()
       .reverse()
       .map((a, i) => ({
-        label: i === 0 ? "First scan" : `Scan ${i + 1}`,
+        label: i === 0 ? st("progress.firstScan") : st("progress.scanN", { n: i + 1 }),
         date: shortDate(new Date(a.createdAt)),
         note: a.opportunities?.[0]?.title ?? "",
         done: true,
@@ -257,13 +257,16 @@ function requestPlan(analysis: Analysis): Promise<PlanTemplate> {
 
 async function generatePlan(analysis: Analysis): Promise<PlanTemplate> {
   const token = await getIdToken();
-  if (!token) throw new NoPlanError("We couldn't start a session. Try again.");
+  if (!token) throw new NoPlanError(st("errors.noSession"));
 
   const user = await getUserDoc();
   const response = await fetch("/api/plan", {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: JSON.stringify({
+      // The eight weeks, the daily habits and the milestones are all written
+      // by the model, so the plan call carries the language too.
+      locale: getRuntimeLocale(),
       answers: user.answers,
       summary: analysis.summary,
       opportunities: analysis.opportunities.map((o) => ({
@@ -282,7 +285,7 @@ async function generatePlan(analysis: Analysis): Promise<PlanTemplate> {
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(body?.error ?? "Your plan didn't come back.");
+    throw new Error(body?.error ?? st("errors.planDidntComeBack"));
   }
 
   const { plan } = (await response.json()) as { plan: PlanTemplate };

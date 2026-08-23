@@ -21,8 +21,9 @@ import { useAsync } from "@/lib/useAsync";
 import { useGlow } from "@/lib/state/GlowContext";
 import { getAnalysis } from "@/services/analysisService";
 import { getPlan, getProgress, setTaskDone } from "@/services/progressService";
-import { greeting } from "@/lib/utils";
+import { greetingKey } from "@/lib/utils";
 import { stylistWord } from "@/lib/copy";
+import { useI18n } from "@/lib/i18n/I18nContext";
 import { cachedPreview } from "@/services/transformationService";
 
 /* Local building blocks. The theme is deliberately literal here — the page is
@@ -67,6 +68,7 @@ function WeekStrip({
 
 export default function HomePage() {
   const toast = useToast();
+  const { t, formatNumber } = useI18n();
   const { gender, photoUrl, photoKey, taskState, toggleTask } = useGlow();
   const [hour, setHour] = useState<number | null>(null);
   const [pending, setPending] = useState(false);
@@ -114,10 +116,10 @@ export default function HomePage() {
     toggleTask(todayTask.id, true);
     try {
       await setTaskDone(todayTask.id, true);
-      toast("Done. That's the big one out of the way.");
+      toast(t("home.taskDone"));
     } catch {
       toggleTask(todayTask.id, false);
-      toast("That didn't save. Try again.", "error");
+      toast(t("common.couldntSave"), "error");
     } finally {
       setPending(false);
     }
@@ -129,16 +131,17 @@ export default function HomePage() {
       <header className="safe-t flex items-center justify-between gap-3 pb-1 sm:gap-4">
         <div className="min-w-0">
           <h1 className="text-[clamp(2rem,8.5vw,2.5rem)] leading-[1.04] font-black tracking-[-0.022em]">
-            {hour === null ? "Welcome back" : greeting(hour)}
+            {hour === null ? t("home.welcomeBack") : t(greetingKey(hour))}
           </h1>
           {planPercent !== null && (
             <p className="mt-2 text-[14px] font-medium text-charcoal/60">
-              Your glow-up is{" "}
-              <span className="font-extrabold text-violet-ink">{planPercent}% complete</span>.
+              {t("home.completion", {
+                percent: formatNumber(planPercent),
+              })}
             </p>
           )}
         </div>
-        <Link href="/profile" aria-label="Profile" className="shrink-0">
+        <Link href="/profile" aria-label={t("nav.profile")} className="shrink-0">
           {photoUrl ? (
             <ImageFrame
               src={photoUrl}
@@ -157,17 +160,16 @@ export default function HomePage() {
 
       {analysis.empty && (
         <section className={`mt-6 ${HERO}`}>
-          <p className="sp-label text-graygreen">First step</p>
+          <p className="sp-label text-graygreen">{t("home.firstStep")}</p>
           <h2 className="mt-3 text-[clamp(1.9rem,7.5vw,2.25rem)] leading-[1.06] font-black tracking-[-0.022em]">
-            Add a photo to start.
+            {t("home.addPhotoTitle")}
           </h2>
           <p className="mt-3 max-w-sm text-[14.5px] leading-relaxed text-offwhite/65">
-            Everything here — your three changes, your matched cuts, your plan — is built
-            from your own photo. Nothing is filled in before then.
+            {t("home.addPhotoBody")}
           </p>
           <Link href="/analyze" className={`mt-7 ${PRIMARY}`}>
-            Start your analysis
-            <ArrowRight className="size-4" aria-hidden />
+            {t("home.startAnalysis")}
+            <ArrowRight className="size-4 rtl:-scale-x-100" aria-hidden />
           </Link>
         </section>
       )}
@@ -177,18 +179,18 @@ export default function HomePage() {
           {/* ——— today: the one charcoal surface on the page, so the thing to
               do next is the thing the eye lands on first */}
           <section className={`mt-6 ${HERO}`}>
-            <p className="sp-label text-graygreen">Today&apos;s focus</p>
+            <p className="sp-label text-graygreen">{t("home.todaysFocus")}</p>
 
             {plan.loading && <Skeleton className="mt-4 h-9 w-2/3 bg-white/10" />}
 
             {plan.error && (
               <p className="mt-3 text-[14.5px] text-offwhite/70">
-                We couldn&apos;t load your plan.{" "}
+                {t("home.planFailed")}{" "}
                 <button
                   onClick={plan.reload}
                   className="font-bold underline underline-offset-4"
                 >
-                  Try again
+                  {t("common.tryAgain")}
                 </button>
               </p>
             )}
@@ -196,13 +198,13 @@ export default function HomePage() {
             {plan.data && (
               <>
                 <h2 className="mt-3 text-[clamp(1.9rem,7.5vw,2.25rem)] leading-[1.06] font-black tracking-[-0.022em] text-balance">
-                  {todayTask ? todayTask.label : "Week 1 is done"}
+                  {todayTask ? todayTask.label : t("home.weekOneDone")}
                 </h2>
 
                 <div className="mt-6">
                   <WeekStrip total={weekTotal} done={weekDone} onCharcoal />
                   <p className="sp-label mt-2.5 text-graygreen">
-                    {weekDone} of {weekTotal} tasks this week
+                    {t("home.tasksThisWeek", { done: weekDone, total: weekTotal })}
                   </p>
                 </div>
 
@@ -216,19 +218,19 @@ export default function HomePage() {
                       className={`flex-1 basis-40 ${PRIMARY}`}
                     >
                       <Check className="size-4" strokeWidth={3} aria-hidden />
-                      Mark as done
+                      {t("home.markDone")}
                     </button>
                   ) : (
                     <Link href="/plan" className={`flex-1 basis-40 ${PRIMARY}`}>
-                      Open Week 2
-                      <ArrowRight className="size-4" aria-hidden />
+                      {t("home.openWeekTwo")}
+                      <ArrowRight className="size-4 rtl:-scale-x-100" aria-hidden />
                     </Link>
                   )}
                   <Link
                     href="/plan"
                     className="inline-flex h-13 flex-1 basis-40 items-center justify-center rounded-[1.5rem] border border-graygreen/30 px-6 text-[15px] font-bold text-offwhite/85 transition-colors hover:border-graygreen/60"
                   >
-                    See the plan
+                    {t("home.seeThePlan")}
                   </Link>
                 </div>
               </>
@@ -246,13 +248,13 @@ export default function HomePage() {
           <section className="mt-9">
             <div className="mb-3.5 flex items-end justify-between gap-4 px-1.5">
               <div>
-                <p className="sp-label text-charcoal/55">Ranked by impact</p>
+                <p className="sp-label text-charcoal/55">{t("home.rankedByImpact")}</p>
                 <h2 className="mt-2 text-[20px] font-black tracking-[-0.015em]">
-                  Your top opportunities
+                  {t("home.topOpportunities")}
                 </h2>
               </div>
               <Link href="/results" className="sp-label pb-1 text-violet-ink">
-                Report
+                {t("home.report")}
               </Link>
             </div>
 
@@ -285,7 +287,7 @@ export default function HomePage() {
                       </span>
                     </span>
                     <ChevronRight
-                      className="size-4 shrink-0 text-graygreen"
+                      className="size-4 shrink-0 text-graygreen rtl:-scale-x-100"
                       strokeWidth={2.5}
                       aria-hidden
                     />
@@ -299,9 +301,9 @@ export default function HomePage() {
           {topStyle && (
             <section className="mt-9">
               <div className="mb-3.5 px-1.5">
-                <p className="sp-label text-charcoal/55">Preview</p>
+                <p className="sp-label text-charcoal/55">{t("home.previewEyebrow")}</p>
                 <h2 className="mt-2 text-[20px] font-black tracking-[-0.015em]">
-                  Your transformation
+                  {t("home.transformation")}
                 </h2>
               </div>
 
@@ -310,19 +312,19 @@ export default function HomePage() {
                   <div className={`grid grid-cols-2 gap-1 overflow-hidden ${NESTED}`}>
                     <ImageFrame
                       src={photoUrl}
-                      alt="Current look"
+                      alt={t("home.currentLook")}
                       overlay={
-                        <span className="sp-label absolute bottom-3 left-3 rounded-full bg-white/85 px-2.5 py-1.5 text-charcoal/70 backdrop-blur-md">
-                          Now
+                        <span className="sp-label absolute bottom-3 start-3 rounded-full bg-white/85 px-2.5 py-1.5 text-charcoal/70 backdrop-blur-md">
+                          {t("common.now")}
                         </span>
                       }
                     />
                     <ImageFrame
                       src={potential}
-                      alt="Potential look"
+                      alt={t("home.potentialLook")}
                       overlay={
-                        <span className="sp-label absolute right-3 bottom-3 rounded-full bg-violet px-2.5 py-1.5 text-white">
-                          Potential
+                        <span className="sp-label absolute end-3 bottom-3 rounded-full bg-violet px-2.5 py-1.5 text-white">
+                          {t("common.potential")}
                         </span>
                       }
                     />
@@ -333,11 +335,10 @@ export default function HomePage() {
                   >
                     <Scissors className="size-5 text-violet" aria-hidden />
                     <p className="mt-3 text-[15px] font-bold">
-                      {photoUrl ? "Render it on your photo" : "Add a photo to see it on you"}
+                      {t(photoUrl ? "home.renderOnPhoto" : "home.addPhotoToSee")}
                     </p>
                     <p className="mt-1.5 max-w-xs text-[13.5px] leading-relaxed text-charcoal/55">
-                      Previews are generated on your own face, so nothing here is a stock
-                      photo.
+                      {t("home.previewsNote")}
                     </p>
                   </div>
                 )}
@@ -346,15 +347,15 @@ export default function HomePage() {
                   <div className="min-w-0 flex-1 basis-40">
                     <p className="text-[15px] font-bold">{topStyle.name}</p>
                     <p className="sp-label mt-1.5 text-charcoal/55">
-                      {topStyle.match}% match
+                      {t("common.matchPct", { value: topStyle.match })}
                     </p>
                   </div>
                   <Link
                     href="/styles"
                     className="inline-flex h-10 items-center gap-1.5 rounded-[1.5rem] border border-graygreen px-4 text-[13px] font-bold text-charcoal transition-colors hover:bg-offwhite"
                   >
-                    Open preview
-                    <ArrowUpRight className="size-3.5" strokeWidth={2.5} aria-hidden />
+                    {t("home.openPreview")}
+                    <ArrowUpRight className="size-3.5 rtl:-scale-x-100" strokeWidth={2.5} aria-hidden />
                   </Link>
                 </div>
               </div>
@@ -365,11 +366,13 @@ export default function HomePage() {
           <section className="mt-9 mb-5">
             <div className="mb-3.5 flex items-end justify-between gap-4 px-1.5">
               <div>
-                <p className="sp-label text-charcoal/55">Week 1</p>
-                <h2 className="mt-2 text-[20px] font-black tracking-[-0.015em]">Your plan</h2>
+                <p className="sp-label text-charcoal/55">{t("home.weekOne")}</p>
+                <h2 className="mt-2 text-[20px] font-black tracking-[-0.015em]">
+                  {t("home.yourPlan")}
+                </h2>
               </div>
               <Link href="/plan" className="sp-label pb-1 text-violet-ink">
-                All weeks
+                {t("home.allWeeks")}
               </Link>
             </div>
 
@@ -430,13 +433,11 @@ export default function HomePage() {
           </section>
 
           <button
-            onClick={() =>
-              toast(`Booking hand-off isn't wired up in this prototype yet.`, "info")
-            }
+            onClick={() => toast(t("home.bookingNotWired"), "info")}
             className="mb-2 inline-flex h-13 w-full items-center justify-center gap-2 rounded-[1.5rem] border border-graygreen bg-white text-[15px] font-bold text-charcoal shadow-soft transition-colors hover:bg-offwhite active:scale-[.99]"
           >
             <Scissors className="size-4" aria-hidden />
-            Find a {stylistWord(gender)} near me
+            {t("home.findStylist", { stylist: stylistWord(t, gender) })}
           </button>
         </>
       )}

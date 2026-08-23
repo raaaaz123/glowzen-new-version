@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { Camera, Scissors } from "lucide-react";
+import { useT } from "@/lib/i18n/I18nContext";
 
 /**
  * Shown when a matched style can't be rendered — almost always because there's
@@ -17,6 +20,8 @@ export function PreviewPending({
   notes: string;
   stylistWord: string;
 }) {
+  const t = useT();
+
   return (
     <div className="relative aspect-[4/5] overflow-hidden rounded-card bg-raised">
       {photo && (
@@ -33,22 +38,18 @@ export function PreviewPending({
         </span>
         <div>
           <p className="text-[15px] font-medium">
-            {photo ? "No preview rendered yet" : "Add a photo to see this on you"}
+            {t(photo ? "previewPending.noPreview" : "previewPending.addPhoto")}
           </p>
           <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
-            {photo ? (
-              <>We haven&apos;t rendered {styleName} on your photo yet.</>
-            ) : (
-              <>
-                Previews are rendered on your own face, so {styleName} needs a photo first.
-              </>
-            )}{" "}
-            The notes below are what actually gets you the cut.
+            {t(photo ? "previewPending.notRenderedYet" : "previewPending.needsPhoto", {
+              name: styleName,
+            })}{" "}
+            {t("previewPending.notesMatter")}
           </p>
         </div>
         {notes && (
           <p className="max-w-xs rounded-2xl border border-line bg-surface/80 px-4 py-3 text-[12.5px] leading-relaxed text-cream/85">
-            Tell your {stylistWord}: &ldquo;{notes}&rdquo;
+            {t("previewPending.tellYour", { stylist: stylistWord })} &ldquo;{notes}&rdquo;
           </p>
         )}
         {!photo && (
@@ -56,7 +57,7 @@ export function PreviewPending({
             href="/analyze"
             className="text-[13px] text-champagne underline underline-offset-4"
           >
-            Add your photo
+            {t("previewPending.addYourPhoto")}
           </Link>
         )}
       </div>

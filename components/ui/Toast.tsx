@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useT } from "@/lib/i18n/I18nContext";
 import { cn } from "@/lib/utils";
 
 type ToastTone = "success" | "info" | "error";
@@ -36,6 +37,7 @@ const toneStyles: Record<ToastTone, string> = {
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const translate = useT();
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const dismiss = useCallback((id: number) => {
@@ -73,7 +75,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <button
                 onClick={() => dismiss(t.id)}
                 className="text-faint transition-colors hover:text-cream"
-                aria-label="Dismiss"
+                aria-label={translate("common.dismiss")}
               >
                 <X className="size-4" />
               </button>

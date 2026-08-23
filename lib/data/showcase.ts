@@ -9,17 +9,17 @@ import type { Gender } from "@/lib/types";
 export const SHOWCASE = [
   {
     id: "male" as const,
-    label: "Men",
+    labelKey: "welcome.exampleMen",
     before: "/img/photo-male-before.jpg",
     after: "/img/photo-male-after.jpg",
-    caption: "Low taper + textured top, beard neckline defined",
+    captionKey: "welcome.exampleMenCaption",
   },
   {
     id: "female" as const,
-    label: "Women",
+    labelKey: "welcome.exampleWomen",
     before: "/img/photo-female-before.jpg",
     after: "/img/photo-female-after.jpg",
-    caption: "Long layers with a face-framing front, brows shaped",
+    captionKey: "welcome.exampleWomenCaption",
   },
 ];
 

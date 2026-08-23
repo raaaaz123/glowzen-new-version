@@ -21,8 +21,10 @@ import {
   PRIORITY_CHOICES,
   SKIN_CONCERN_CHOICES,
   SKIN_TYPE_CHOICES,
+  resolveChoices,
 } from "@/lib/data/questions";
 import { useGlow } from "@/lib/state/GlowContext";
+import { useT } from "@/lib/i18n/I18nContext";
 import { saveAnswers } from "@/services/userService";
 import type { AgeRange, Gender, QuestionnaireAnswers } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -33,20 +35,12 @@ const TOTAL = 8;
 const AUTO_ADVANCE = new Set([1, 2, 3, 4, 5, 7]);
 
 /** Shown once a step is answered — the app reacting rather than just recording. */
-const REACTIONS: Record<number, string> = {
-  1: "Got it. That decides which options you see from here.",
-  2: "Good — that's where we'll start.",
-  3: "Noted. Every recommendation will point there.",
-  4: "That goes to the top of your list.",
-  5: "That rules out the cuts that wouldn't sit right on you.",
-  6: "We'll keep the skincare advice inside that.",
-  7: "Nothing we suggest will take longer than that.",
-  8: "That's everything. Let's look at your photo.",
-};
+const reactionKey = (step: number) => `questionnaire.reaction${step}`;
 
 export default function QuestionnairePage() {
   const router = useRouter();
   const toast = useToast();
+  const t = useT();
   const { answers, setAnswer } = useGlow();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -54,6 +48,26 @@ export default function QuestionnairePage() {
   const scroller = useRef<HTMLDivElement>(null);
 
   const gender = answers.gender ?? "neutral";
+
+  // Resolved once per render rather than inside each step, so switching
+  // language re-labels every list in the same pass.
+  const choices = useMemo(
+    () => ({
+      gender: resolveChoices(t, "gender", GENDER_CHOICES),
+      age: resolveChoices(t, "age", AGE_CHOICES),
+      focus: resolveChoices(t, "focus", FOCUS_CHOICES[gender]),
+      aesthetic: resolveChoices(t, "aesthetic", AESTHETIC_CHOICES[gender]),
+      concern: resolveChoices(t, "concern", CONCERN_CHOICES[gender]),
+      hairType: resolveChoices(t, "hairType", HAIR_TYPE_CHOICES),
+      hairLength: resolveChoices(t, "hairLength", HAIR_LENGTH_CHOICES[gender]),
+      skinType: resolveChoices(t, "skinType", SKIN_TYPE_CHOICES),
+      skinConcern: resolveChoices(t, "skinConcern", SKIN_CONCERN_CHOICES),
+      dailyMinutes: resolveChoices(t, "dailyMinutes", DAILY_MINUTES_CHOICES),
+      commitment: resolveChoices(t, "commitment", COMMITMENT_CHOICES),
+      priority: resolveChoices(t, "priority", PRIORITY_CHOICES),
+    }),
+    [t, gender],
+  );
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0, behavior: "auto" });
@@ -129,7 +143,7 @@ export default function QuestionnairePage() {
       await saveAnswers(answers as QuestionnaireAnswers);
       router.push("/upload");
     } catch {
-      toast("We couldn't save your answers. Try again.", "error");
+      toast(t("questionnaire.saveFailed"), "error");
       setSaving(false);
     }
   }
@@ -143,12 +157,12 @@ export default function QuestionnairePage() {
           <div className="mb-4 flex items-center gap-3">
             <button
               onClick={back}
-              aria-label="Go back"
-              className="-ml-2 grid size-10 shrink-0 place-items-center rounded-full text-cream transition-colors hover:bg-raised"
+              aria-label={t("common.goBack")}
+              className="-ms-2 grid size-10 shrink-0 place-items-center rounded-full text-cream transition-colors hover:bg-raised"
             >
-              <ChevronLeft className="size-5" />
+              <ChevronLeft className="size-5 rtl:-scale-x-100" />
             </button>
-            <span className="eyebrow ml-auto">Building your profile</span>
+            <span className="eyebrow ms-auto">{t("questionnaire.buildingProfile")}</span>
           </div>
           <StepBar step={step} total={TOTAL} />
         </div>
@@ -160,10 +174,10 @@ export default function QuestionnairePage() {
       >
         <div key={step} className="animate-rise mx-auto w-full max-w-[560px] pt-4 pb-8">
           {step === 1 && (
-            <Step title="First, a bit about you." subtitle="This decides which options you see.">
-              <Field legend="You present as">
+            <Step title={t("questionnaire.step1Title")} subtitle={t("questionnaire.step1Subtitle")}>
+              <Field legend={t("questionnaire.step1LegendGender")}>
                 <div className="space-y-2.5">
-                  {GENDER_CHOICES.map((c) => (
+                  {choices.gender.map((c) => (
                     <OptionCard
                       key={c.id}
                       label={c.label}
@@ -175,9 +189,9 @@ export default function QuestionnairePage() {
                   ))}
                 </div>
               </Field>
-              <Field legend="Age range" className="mt-7">
+              <Field legend={t("questionnaire.step1LegendAge")} className="mt-7">
                 <Chips>
-                  {AGE_CHOICES.map((c) => (
+                  {choices.age.map((c) => (
                     <OptionChip
                       key={c.id}
                       label={c.label}
@@ -191,9 +205,9 @@ export default function QuestionnairePage() {
           )}
 
           {step === 2 && (
-            <Step title="What are you looking to improve?" subtitle="Pick the one you care about most.">
+            <Step title={t("questionnaire.step2Title")} subtitle={t("questionnaire.step2Subtitle")}>
               <List
-                choices={FOCUS_CHOICES[gender]}
+                choices={choices.focus}
                 value={answers.focus}
                 onChange={(id) => pick("focus", id)}
               />
@@ -201,9 +215,9 @@ export default function QuestionnairePage() {
           )}
 
           {step === 3 && (
-            <Step title="What's your target aesthetic?" subtitle="The look you'd like to move towards.">
+            <Step title={t("questionnaire.step3Title")} subtitle={t("questionnaire.step3Subtitle")}>
               <div className="grid grid-cols-2 gap-2.5">
-                {AESTHETIC_CHOICES[gender].map((c) => (
+                {choices.aesthetic.map((c) => (
                   <OptionCard
                     key={c.id}
                     label={c.label}
@@ -218,11 +232,11 @@ export default function QuestionnairePage() {
 
           {step === 4 && (
             <Step
-              title="What bothers you most right now?"
-              subtitle="Be honest — it only changes what we look at first."
+              title={t("questionnaire.step4Title")}
+              subtitle={t("questionnaire.step4Subtitle")}
             >
               <List
-                choices={CONCERN_CHOICES[gender]}
+                choices={choices.concern}
                 value={answers.concern}
                 onChange={(id) => pick("concern", id)}
               />
@@ -231,12 +245,12 @@ export default function QuestionnairePage() {
 
           {step === 5 && (
             <Step
-              title="Tell us about your hair."
-              subtitle="A photo shows texture, but not what it does when it grows out."
+              title={t("questionnaire.step5Title")}
+              subtitle={t("questionnaire.step5Subtitle")}
             >
-              <Field legend="Texture">
+              <Field legend={t("questionnaire.step5LegendTexture")}>
                 <Chips>
-                  {HAIR_TYPE_CHOICES.map((c) => (
+                  {choices.hairType.map((c) => (
                     <OptionChip
                       key={c.id}
                       label={c.label}
@@ -246,9 +260,9 @@ export default function QuestionnairePage() {
                   ))}
                 </Chips>
               </Field>
-              <Field legend="Length right now" className="mt-7">
+              <Field legend={t("questionnaire.step5LegendLength")} className="mt-7">
                 <Chips>
-                  {HAIR_LENGTH_CHOICES[gender].map((c) => (
+                  {choices.hairLength.map((c) => (
                     <OptionChip
                       key={c.id}
                       label={c.label}
@@ -263,12 +277,12 @@ export default function QuestionnairePage() {
 
           {step === 6 && (
             <Step
-              title="And your skin."
-              subtitle="This one we can't read from a photo, and it changes the advice a lot."
+              title={t("questionnaire.step6Title")}
+              subtitle={t("questionnaire.step6Subtitle")}
             >
-              <Field legend="Skin type">
+              <Field legend={t("questionnaire.step6LegendType")}>
                 <Chips>
-                  {SKIN_TYPE_CHOICES.map((c) => (
+                  {choices.skinType.map((c) => (
                     <OptionChip
                       key={c.id}
                       label={c.label}
@@ -279,12 +293,12 @@ export default function QuestionnairePage() {
                 </Chips>
               </Field>
               <Field
-                legend={`What bothers you · pick up to ${MAX_SKIN_CONCERNS}`}
+                legend={t("questionnaire.step6LegendConcerns", { max: MAX_SKIN_CONCERNS })}
                 className="mt-7"
                 count={`${answers.skinConcerns.length}/${MAX_SKIN_CONCERNS}`}
               >
                 <div className="grid grid-cols-2 gap-2.5">
-                  {SKIN_CONCERN_CHOICES.map((c) => (
+                  {choices.skinConcern.map((c) => (
                     <OptionCard
                       key={c.id}
                       label={c.label}
@@ -301,17 +315,17 @@ export default function QuestionnairePage() {
           )}
 
           {step === 7 && (
-            <Step title="How far are you willing to go?" subtitle="We'll keep every recommendation inside this.">
-              <Field legend="Size of change">
+            <Step title={t("questionnaire.step7Title")} subtitle={t("questionnaire.step7Subtitle")}>
+              <Field legend={t("questionnaire.step7LegendSize")}>
                 <List
-                  choices={COMMITMENT_CHOICES}
+                  choices={choices.commitment}
                   value={answers.commitment}
                   onChange={(id) => pick("commitment", id)}
                 />
               </Field>
-              <Field legend="Time you'll spend a day" className="mt-7">
+              <Field legend={t("questionnaire.step7LegendTime")} className="mt-7">
                 <Chips>
-                  {DAILY_MINUTES_CHOICES.map((c) => (
+                  {choices.dailyMinutes.map((c) => (
                     <OptionChip
                       key={c.id}
                       label={c.label}
@@ -325,9 +339,9 @@ export default function QuestionnairePage() {
           )}
 
           {step === 8 && (
-            <Step title="Last one. What matters most?" subtitle="This sets the tone of your plan.">
+            <Step title={t("questionnaire.step8Title")} subtitle={t("questionnaire.step8Subtitle")}>
               <List
-                choices={PRIORITY_CHOICES}
+                choices={choices.priority}
                 value={answers.priority}
                 onChange={(id) => pick("priority", id)}
               />
@@ -337,7 +351,7 @@ export default function QuestionnairePage() {
           {canContinue && (
             <p className="animate-rise mt-6 flex items-start gap-2 text-[13px] leading-relaxed text-champagne">
               <Sparkles className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-              {REACTIONS[step]}
+              {t(reactionKey(step))}
             </p>
           )}
         </div>
@@ -350,11 +364,11 @@ export default function QuestionnairePage() {
         />
         <div className="mx-auto flex w-full max-w-[560px] gap-3">
           <Button variant="secondary" className="px-6" onClick={back}>
-            Back
+            {t("common.back")}
           </Button>
           <Button fullWidth disabled={!canContinue} loading={saving} onClick={next}>
-            {step === TOTAL ? "Let's analyze you" : "Continue"}
-            {step < TOTAL && <ArrowRight className="size-4" aria-hidden />}
+            {step === TOTAL ? t("questionnaire.finish") : t("common.continue")}
+            {step < TOTAL && <ArrowRight className="size-4 rtl:-scale-x-100" aria-hidden />}
           </Button>
         </div>
       </footer>

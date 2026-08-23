@@ -7,6 +7,7 @@ import type {
   Hairstyle,
   TransformationResult,
 } from "@/lib/types";
+import { st } from "@/lib/i18n/runtime";
 import { getAnalysis, getBeard } from "./analysisService";
 import { saveSavedStyle } from "./userService";
 
@@ -129,15 +130,17 @@ export async function generatePreview(
   // taper comes back rendered as a feminine one.
   const analysis = await getAnalysis(gender);
   const style = analysis.hairstyles?.find((s) => s.id === styleId);
-  if (!style) throw new Error("We couldn't find that style. Pick another one.");
+  if (!style) throw new Error(st("errors.styleNotFound"));
 
-  const base = { styleId, caption: `${style.name} · ${style.match}% match` };
+  // The cut's name comes back from the model already in the user's language;
+  // only the word "match" around it needs translating.
+  const base = { styleId, caption: `${style.name} · ${st("common.matchPct", { value: style.match })}` };
 
   const cached = await cachedPreview(styleId, photoKey);
   if (cached) return { ...base, after: cached };
 
   if (!photoKey) {
-    throw new Error("Add a photo first — previews are rendered on your own face.");
+    throw new Error(st("errors.previewNeedsPhoto"));
   }
 
   // Keyed by photo as well, so re-uploading mid-render doesn't join the render
@@ -168,15 +171,17 @@ export async function generateBeardPreview(
 ): Promise<TransformationResult> {
   const beard = await getBeard(gender);
   const style = beard.styles.find((s) => s.id === styleId);
-  if (!style) throw new Error("We couldn't find that shape. Pick another one.");
+  if (!style) throw new Error(st("errors.shapeNotFound"));
 
-  const base = { styleId, caption: `${style.name} · ${style.match}% match` };
+  // The cut's name comes back from the model already in the user's language;
+  // only the word "match" around it needs translating.
+  const base = { styleId, caption: `${style.name} · ${st("common.matchPct", { value: style.match })}` };
 
   const cached = await cachedPreview(styleId, photoKey);
   if (cached) return { ...base, after: cached };
 
   if (!photoKey) {
-    throw new Error("Add a photo first — previews are rendered on your own face.");
+    throw new Error(st("errors.previewNeedsPhoto"));
   }
 
   const url = await once(`${styleId}:${photoKey}`, async () => {
@@ -211,7 +216,7 @@ export async function generateMakeupPreview(
   if (cached) return cached;
 
   if (!photoKey) {
-    throw new Error("Add a photo first — previews are rendered on your own face.");
+    throw new Error(st("errors.previewNeedsPhoto"));
   }
 
   return once(`${look.id}:${photoKey}`, async () => {

@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
+import { useT } from "@/lib/i18n/I18nContext";
 import { cn } from "@/lib/utils";
 
 /** Bottom sheet on phones, centred dialog from `sm` upwards. */
@@ -20,6 +21,8 @@ export function Sheet({
   children: ReactNode;
   footer?: ReactNode;
 }) {
+  const t = useT();
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -39,7 +42,7 @@ export function Sheet({
       <button
         className="animate-fade absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={onClose}
-        aria-label="Close"
+        aria-label={t("common.close")}
       />
       <div
         role="dialog"
@@ -60,8 +63,8 @@ export function Sheet({
           </div>
           <button
             onClick={onClose}
-            className="-mr-1 -mt-1 rounded-full p-2 text-faint transition-colors hover:bg-cream/5 hover:text-cream"
-            aria-label="Close"
+            className="-me-1 -mt-1 rounded-full p-2 text-faint transition-colors hover:bg-cream/5 hover:text-cream"
+            aria-label={t("common.close")}
           >
             <X className="size-4" />
           </button>

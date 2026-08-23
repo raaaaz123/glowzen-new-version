@@ -22,11 +22,13 @@ import { ButtonLink } from "@/components/ui/Button";
 import { TopBar } from "@/components/app/TopBar";
 import { useAsync } from "@/lib/useAsync";
 import { useGlow } from "@/lib/state/GlowContext";
+import { useT } from "@/lib/i18n/I18nContext";
 import { getPastScans } from "@/services/analysisService";
 
 export default function AnalyzePage() {
   const router = useRouter();
   const toast = useToast();
+  const t = useT();
   const { gender, hasAnalysis } = useGlow();
   const { data, loading, error, reload } = useAsync(() => getPastScans(gender), [gender]);
 
@@ -39,21 +41,21 @@ export default function AnalyzePage() {
   }[] = [
     {
       icon: Camera,
-      label: "New selfie",
-      body: "Fresh analysis from a new photo",
+      label: t("analyze.newSelfie"),
+      body: t("analyze.newSelfieBody"),
       onClick: () => router.push("/upload"),
       primary: true,
     },
     {
       icon: GitCompareArrows,
-      label: "Compare progress",
-      body: "Day 1 against today",
+      label: t("analyze.compare"),
+      body: t("analyze.compareBody"),
       onClick: () => router.push("/progress"),
     },
     {
       icon: Scissors,
-      label: "Try a hairstyle",
-      body: "Preview shapes on your photo",
+      label: t("analyze.tryHairstyle"),
+      body: t("analyze.tryHairstyleBody"),
       onClick: () => router.push("/styles"),
     },
     ...(gender === "male"
@@ -61,43 +63,41 @@ export default function AnalyzePage() {
       : [
           {
             icon: Palette,
-            label: "Makeup shades",
-            body: "Undertone, shades and looks",
+            label: t("analyze.makeupShades"),
+            body: t("analyze.makeupShadesBody"),
             onClick: () => router.push("/makeup"),
           },
         ]),
     gender === "male"
       ? {
           icon: ScanFace,
-          label: "Try a beard",
-          body: "Shapes matched to your growth",
+          label: t("analyze.tryBeard"),
+          body: t("analyze.tryBeardBody"),
           onClick: () => router.push("/beard"),
         }
       : {
           icon: ScanFace,
-          label: "Try grooming",
-          body: "Brow and lash shaping",
-          onClick: () => toast("Grooming previews land in the next build.", "info"),
+          label: t("analyze.tryGrooming"),
+          body: t("analyze.tryGroomingBody"),
+          onClick: () => toast(t("analyze.groomingSoon"), "info"),
         },
     {
       icon: Shirt,
-      label: "Analyze style",
-      body: "Fit, palette and proportion",
-      onClick: () => toast("Style analysis lands in the next build.", "info"),
+      label: t("analyze.analyzeStyle"),
+      body: t("analyze.analyzeStyleBody"),
+      onClick: () => toast(t("analyze.styleSoon"), "info"),
     },
   ];
 
   return (
     <main>
-      <TopBar back={false} title="New analysis" />
+      <TopBar back={false} title={t("analyze.title")} />
 
-      <p className="mt-6 max-w-md text-[15px] leading-relaxed text-muted">
-        Run something new, or look back at what&apos;s already changed.
-      </p>
+      <p className="mt-6 max-w-md text-[15px] leading-relaxed text-muted">{t("analyze.intro")}</p>
 
       <div className="mt-6 grid grid-cols-2 gap-3">
         {actions.map(({ icon: Icon, label, body, onClick, primary }) => (
-          <button key={label} onClick={onClick} className="text-left">
+          <button key={label} onClick={onClick} className="text-start">
             <Card
               className={`h-full p-5 transition-colors hover:border-champagne/35 ${
                 primary ? "col-span-2 border-champagne/30 bg-champagne/6" : ""
@@ -118,11 +118,11 @@ export default function AnalyzePage() {
       </div>
 
       <section className="mt-10 mb-2">
-        <SectionHeader eyebrow="History" title="Previous analyses" />
+        <SectionHeader eyebrow={t("analyze.history")} title={t("analyze.previousAnalyses")} />
 
         {!loading && !error && hasAnalysis && data && data.length > 0 && (
           <p className="mb-4 -mt-1 text-[12.5px] leading-relaxed text-muted">
-            Open any scan to read what it said on the day.
+            {t("analyze.openAnyScan")}
           </p>
         )}
 
@@ -139,11 +139,11 @@ export default function AnalyzePage() {
         {!loading && !error && !hasAnalysis && (
           <EmptyState
             icon={Sparkles}
-            title="No analyses yet"
-            body="Add one clear photo and you'll have your first report in under a minute."
+            title={t("analyze.noAnalysesTitle")}
+            body={t("analyze.noAnalysesBody")}
             action={
               <ButtonLink href="/upload" size="md">
-                Start your first analysis
+                {t("analyze.startFirst")}
               </ButtonLink>
             }
           />
@@ -168,14 +168,15 @@ export default function AnalyzePage() {
                         <span className="font-mono text-[11px] text-faint">{scan.dateLabel}</span>
                       </div>
                       <p className="mt-1 truncate text-[12.5px] text-muted">
-                        Top opportunity: <span className="text-cream/85">{scan.topArea}</span>
+                        {t("analyze.topOpportunity")}{" "}
+                        <span className="text-cream/85">{scan.topArea}</span>
                       </p>
                     </div>
                     <span className="shrink-0 rounded-full border border-line px-2.5 py-1 font-mono text-[11px] text-champagne">
                       {scan.overall}
                     </span>
                     <ChevronRight
-                      className="size-4 shrink-0 text-faint transition-colors group-hover:text-champagne"
+                      className="size-4 shrink-0 text-faint transition-colors group-hover:text-champagne rtl:-scale-x-100"
                       aria-hidden
                     />
                   </Card>

@@ -2,6 +2,7 @@
 
 import { Expand, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useT } from "@/lib/i18n/I18nContext";
 import { cn } from "@/lib/utils";
 
 /**
@@ -29,6 +30,7 @@ export function ImageFrame({
   overlay?: ReactNode;
   priority?: boolean;
 }) {
+  const t = useT();
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -72,8 +74,8 @@ export function ImageFrame({
         {expandable && (
           <button
             onClick={() => setOpen(true)}
-            aria-label={`View ${alt} full screen`}
-            className="absolute top-3 right-3 grid size-9 place-items-center rounded-full bg-black/45 text-white backdrop-blur-md transition-colors hover:bg-black/70"
+            aria-label={t("imageFrame.viewFullScreen", { alt })}
+            className="absolute top-3 end-3 grid size-9 place-items-center rounded-full bg-black/45 text-white backdrop-blur-md transition-colors hover:bg-black/70"
           >
             <Expand className="size-4" />
           </button>
@@ -88,7 +90,7 @@ export function ImageFrame({
           <div className="safe-t flex justify-end p-4">
             <button
               onClick={() => setOpen(false)}
-              aria-label="Close preview"
+              aria-label={t("imageFrame.closePreview")}
               className="grid size-10 place-items-center rounded-full bg-raised text-cream"
             >
               <X className="size-5" />

@@ -2,6 +2,8 @@ import { currentUid, getIdToken } from "@/lib/firebase/auth";
 import { listDocs, paths, readDoc, writeDoc } from "@/lib/firebase/firestore";
 import { getPhotoUrl, uploadPhoto } from "@/lib/storage/photos";
 import { EmptyError } from "@/lib/emptyError";
+import { st, stLongDate, stShortDate } from "@/lib/i18n/runtime";
+import { getRuntimeLocale } from "@/lib/i18n/runtime";
 import type {
   Analysis,
   BeardProfile,
@@ -15,12 +17,16 @@ import type {
 } from "@/lib/types";
 import { savePhotoKey } from "./userService";
 
-export const ANALYSIS_STAGES = [
-  "Understanding face shape",
-  "Analysing hairstyle",
-  "Checking facial framing",
-  "Analysing skin appearance",
-  "Finding your highest-impact improvements",
+/**
+ * The loader's five lines, as dictionary keys. The screen translates them —
+ * the timing is the same everywhere, the words are not.
+ */
+export const ANALYSIS_STAGE_KEYS = [
+  "analyzing.stage1",
+  "analyzing.stage2",
+  "analyzing.stage3",
+  "analyzing.stage4",
+  "analyzing.stage5",
 ];
 
 /** Thrown when the analysis failed. There is no fallback — this surfaces. */
@@ -79,6 +85,9 @@ export async function runAnalysis(
         answers,
         wantsMakeup: wantsMakeup(gender),
         wantsBeard: wantsBeard(gender),
+        // Everything the model writes — the summary, the three changes, the
+        // cut names and the barber notes — comes back in this language.
+        locale: getRuntimeLocale(),
       }),
     });
 
@@ -114,12 +123,9 @@ export async function runAnalysis(
           image: photo,
           imagePosition: AREA_CROP[o.area] ?? "object-center",
           // Omitted rather than set to undefined — Firestore rejects undefined.
-          ...(o.area === "skin"
-            ? {
-                disclaimer:
-                  "General skincare guidance, not medical advice. See a dermatologist for persistent concerns.",
-              }
-            : {}),
+          // Written in the language the analysis ran in, and stored with it —
+          // re-reading an old scan should show what it said on the day.
+          ...(o.area === "skin" ? { disclaimer: st("disclaimers.skin") } : {}),
         })),
         hairstyles: data.hairstyles.map((h, i) => ({
           ...h,
@@ -167,13 +173,11 @@ export async function runAnalysis(
       | { error?: string; code?: string }
       | null;
 
-    throw new AnalysisError(body?.error ?? "The analysis didn't come back.", body?.code);
+    throw new AnalysisError(body?.error ?? st("errors.analysisDidntComeBack"), body?.code);
   }
 
   throw new AnalysisError(
-    token
-      ? "Add a photo before running an analysis."
-      : "We couldn't start a session. Check your connection and try again.",
+    token ? st("errors.addPhotoFirst") : st("errors.sessionFailed"),
     "no_photo",
   );
 }
@@ -237,8 +241,8 @@ export async function scanPhoto(analysis: {
 
 /** Thrown when a screen needs an analysis and the user hasn't run one. */
 export class NoAnalysisError extends EmptyError {
-  constructor(message = "Run your first analysis and this fills in.") {
-    super(message, { label: "Start your analysis", href: "/analyze" });
+  constructor(message = st("errors.noAnalysis")) {
+    super(message, { label: st("errors.startYourAnalysis"), href: "/analyze" });
   }
 }
 
@@ -257,8 +261,8 @@ export async function getMakeup(gender: Gender | null): Promise<MakeupProfile | 
 
 /** Thrown when a profile has no facial-hair reading to show. */
 export class NoBeardError extends EmptyError {
-  constructor(message = "Facial hair is read for male profiles. Run an analysis and it lands here.") {
-    super(message, { label: "Start your analysis", href: "/analyze" });
+  constructor(message = st("errors.noBeard")) {
+    super(message, { label: st("errors.startYourAnalysis"), href: "/analyze" });
   }
 }
 
@@ -282,25 +286,23 @@ export async function getPastScans(_gender: Gender | null): Promise<PastScan[]> 
   return Promise.all(
     stored.map(async (a, i) => ({
       id: a.id,
-      label: i === 0 ? "Latest scan" : `Scan ${stored.length - i}`,
-      dateLabel: new Date(a.createdAt).toLocaleDateString(undefined, {
-        day: "numeric",
-        month: "short",
-      }),
+      label: i === 0 ? st("scans.latest") : st("scans.numbered", { n: stored.length - i }),
+      dateLabel: stShortDate(a.createdAt),
       overall: a.overall,
       photo: await scanPhoto(a),
-      topArea: a.opportunities?.[0]?.title ?? "Hairstyle",
+      topArea: a.opportunities?.[0]?.title ?? st("scans.fallbackTopArea"),
     })),
   );
 }
 
-/** Long-form date for a stored analysis, e.g. "22 August 2026". */
+/**
+ * Long-form date for a stored analysis — "22 August 2026", "٢٢ أغسطس ٢٠٢٦",
+ * "2026年8月22日". The month name and the ordering both follow the chosen
+ * language, not the browser's, so a German speaker on an English phone still
+ * reads a German date.
+ */
 export function scanDateLabel(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  return stLongDate(iso);
 }
 
 const slug = (prefix: string, i: number, name: string) =>

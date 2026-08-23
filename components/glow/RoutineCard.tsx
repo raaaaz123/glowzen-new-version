@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Check, Flame } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { useGlow } from "@/lib/state/GlowContext";
+import { useT } from "@/lib/i18n/I18nContext";
 import { computeStreak, dailyHabits, dateKey, dayTarget, doneOn } from "@/lib/streak";
 import { cn } from "@/lib/utils";
 import type { RoutineHabit } from "@/lib/types";
@@ -21,6 +22,7 @@ export function RoutineCard({
   compact?: boolean;
 }) {
   const { habitLog, toggleHabit } = useGlow();
+  const t = useT();
 
   const today = dateKey();
   const daily = dailyHabits(habits);
@@ -43,18 +45,21 @@ export function RoutineCard({
 
         <div className="min-w-0 flex-1">
           <p className="text-[15px] font-medium">
-            {current > 0 ? `${current}-day streak` : "Start your streak"}
+            {current > 0
+              ? t("routine.streak", { count: current })
+              : t("routine.startStreak")}
           </p>
           <p className="mt-0.5 text-[12.5px] text-muted">
             {complete
-              ? "Today's done. Come back tomorrow."
-              : `${doneToday} of ${target} today${longest > current ? ` · best ${longest}` : ""}`}
+              ? t("routine.todayDone")
+              : t("routine.todayProgress", { done: doneToday, target }) +
+                (longest > current ? t("routine.best", { count: longest }) : "")}
           </p>
         </div>
 
         {compact && (
           <Link href="/plan" className="shrink-0 text-[13px] text-champagne">
-            Open
+            {t("common.open")}
           </Link>
         )}
       </div>
@@ -66,7 +71,7 @@ export function RoutineCard({
             <li key={habit.id}>
               <button
                 onClick={() => toggleHabit(habit.id, !done)}
-                className="flex w-full items-start gap-3 rounded-xl py-2.5 text-left transition-colors hover:bg-cream/[.03]"
+                className="flex w-full items-start gap-3 rounded-xl py-2.5 text-start transition-colors hover:bg-cream/[.03]"
               >
                 <span
                   className={cn(
@@ -91,8 +96,10 @@ export function RoutineCard({
                     </span>
                   )}
                 </span>
+                {/* am / pm / weekly is a stored value, not a label — the word
+                    for it comes from the dictionary. */}
                 <span className="mt-1 shrink-0 font-mono text-[10px] tracking-[0.14em] text-faint uppercase">
-                  {habit.when}
+                  {t(`routine.when.${habit.when}`)}
                 </span>
               </button>
             </li>

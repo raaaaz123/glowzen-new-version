@@ -13,27 +13,28 @@ import { ErrorState, NothingYet } from "@/components/ui/States";
 import { TopBar } from "@/components/app/TopBar";
 import { useAsync } from "@/lib/useAsync";
 import { useGlow } from "@/lib/state/GlowContext";
+import { useT } from "@/lib/i18n/I18nContext";
 import { getAnalysis } from "@/services/analysisService";
 import type { Opportunity } from "@/lib/types";
 
 export default function ImprovementsPage() {
   const router = useRouter();
+  const t = useT();
   const { gender } = useGlow();
   const { data, loading, error, empty, reload } = useAsync(() => getAnalysis(gender), [gender]);
   const [detail, setDetail] = useState<Opportunity | null>(null);
 
   return (
     <main>
-      <TopBar title="Start here" />
+      <TopBar title={t("improvements.title")} />
 
       <p className="mt-6 max-w-md text-[15px] leading-relaxed text-muted">
-        You don&apos;t need to change everything. These three are ordered by how much difference
-        they&apos;d make.
+        {t("improvements.intro")}
       </p>
 
       {empty && (
         <div className="mt-8">
-          <NothingYet empty={empty} title="Your improvements land here" />
+          <NothingYet empty={empty} title={t("improvements.emptyTitle")} />
         </div>
       )}
 
@@ -59,7 +60,7 @@ export default function ImprovementsPage() {
                 <div className="sm:flex">
                   <ImageFrame
                     src={op.image}
-                    alt={`${op.title} example`}
+                    alt={t("results.exampleAlt", { title: op.title })}
                     ratio="aspect-[3/2] sm:aspect-auto"
                     className="sm:w-40 sm:shrink-0"
                     imgClassName={op.imagePosition}
@@ -70,13 +71,14 @@ export default function ImprovementsPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <p className="font-mono text-[10px] tracking-[0.18em] text-faint uppercase">
-                          {String(i + 1).padStart(2, "0")} / 03
+                          {String(i + 1).padStart(2, "0")} /{" "}
+                          {String(data.opportunities.length).padStart(2, "0")}
                         </p>
                         <h2 className="type-display mt-2 text-[1.75rem]">{op.title}</h2>
                         <p className="mt-1.5 text-[12.5px] text-champagne">{op.headline}</p>
                       </div>
                       <span className="shrink-0 rounded-full border border-champagne/25 bg-champagne/10 px-3 py-1 font-mono text-[11px] text-champagne">
-                        {op.impact} impact
+                        {t("common.impactValue", { value: op.impact })}
                       </span>
                     </div>
 
@@ -97,15 +99,15 @@ export default function ImprovementsPage() {
                       {op.area === "hair" ? (
                         <Button size="sm" onClick={() => router.push("/styles")}>
                           <Sparkles className="size-3.5" aria-hidden />
-                          Preview on me
+                          {t("improvements.previewOnMe")}
                         </Button>
                       ) : (
                         <Button size="sm" variant="quiet" onClick={() => setDetail(op)}>
-                          How to do it
+                          {t("improvements.howToDoIt")}
                         </Button>
                       )}
                       <Button size="sm" variant="secondary" onClick={() => setDetail(op)}>
-                        Why this works
+                        {t("improvements.whyThisWorks")}
                       </Button>
                     </div>
                   </div>
@@ -118,8 +120,8 @@ export default function ImprovementsPage() {
 
       <div className="mt-8 mb-2">
         <Button fullWidth variant="secondary" onClick={() => router.push("/plan")}>
-          Put this into a 30-day plan
-          <ArrowRight className="size-4" aria-hidden />
+          {t("improvements.putIntoPlan")}
+          <ArrowRight className="size-4 rtl:-scale-x-100" aria-hidden />
         </Button>
       </div>
 
@@ -127,11 +129,13 @@ export default function ImprovementsPage() {
         open={Boolean(detail)}
         onClose={() => setDetail(null)}
         title={detail?.title ?? ""}
-        description={detail ? `${detail.impact} impact` : undefined}
+        description={
+          detail ? t("common.impactValue", { value: detail.impact }) : undefined
+        }
         footer={
           detail?.area === "hair" ? (
             <Button fullWidth onClick={() => router.push("/styles")}>
-              Preview styles on me
+              {t("improvements.previewStyles")}
             </Button>
           ) : undefined
         }
@@ -139,11 +143,11 @@ export default function ImprovementsPage() {
         {detail && (
           <div className="space-y-6 pb-2">
             <div>
-              <p className="eyebrow mb-2">Why this works</p>
+              <p className="eyebrow mb-2">{t("improvements.whyThisWorks")}</p>
               <p className="text-[14px] leading-relaxed text-muted">{detail.why}</p>
             </div>
             <div>
-              <p className="eyebrow mb-3">What to actually do</p>
+              <p className="eyebrow mb-3">{t("improvements.whatToActuallyDo")}</p>
               <ul className="space-y-2.5">
                 {detail.steps.map((s, i) => (
                   <li key={s} className="flex gap-3 text-[14px] leading-relaxed text-cream/90">

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { EmptyError } from "@/lib/emptyError";
+import { st } from "@/lib/i18n/runtime";
 
 /** Small fetch-state helper so every screen gets loading / error / retry for free. */
 export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]) {
@@ -28,7 +29,7 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]) {
         if (cancelled) return;
         // Nothing-here-yet gets its own channel so screens can invite instead of alarm.
         if (e instanceof EmptyError) setEmpty(e);
-        else setError(e instanceof Error ? e.message : "Something went wrong.");
+        else setError(e instanceof Error ? e.message : st("common.somethingWentWrong"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

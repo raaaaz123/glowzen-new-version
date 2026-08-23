@@ -2,6 +2,7 @@ import { DeleteObjectsCommand, ListObjectsV2Command, PutObjectCommand } from "@a
 import { AuthError, requireUser } from "@/lib/server/auth";
 import { isR2Configured, R2_BUCKET, r2, userPrefix } from "@/lib/server/r2";
 import { rateLimit } from "@/lib/server/rateLimit";
+import { requestLocale, serverT } from "@/lib/server/i18n";
 
 export const runtime = "nodejs";
 
@@ -32,28 +33,35 @@ function fail(message: string, status: number) {
  * before it reaches the bucket.
  */
 export async function POST(request: Request) {
+  // The body is the photo itself, so the language rides on a header here.
+  const t = serverT(requestLocale(request));
+  const maxMb = MAX_BYTES / (1024 * 1024);
+
   let uid: string;
   try {
     ({ uid } = await requireUser(request));
   } catch (error) {
-    return fail(error instanceof AuthError ? error.message : "Unauthorized.", 401);
+    // The specific reason — no token, expired token, unconfigured project — is
+    // a server detail. The caller gets one translated line either way.
+    if (!(error instanceof AuthError)) console.error("[glowzen] Auth failed:", error);
+    return fail(t("server.unauthorized"), 401);
   }
 
-  if (!rateLimit(`upload:${uid}`, 12, 60_000)) return fail("Too many uploads. Wait a minute.", 429);
-  if (!isR2Configured) return fail("Photo storage isn't configured.", 503);
+  if (!rateLimit(`upload:${uid}`, 12, 60_000)) return fail(t("server.rateUpload"), 429);
+  if (!isR2Configured) return fail(t("server.storageNotConfigured"), 503);
 
   const contentType = (request.headers.get("content-type") ?? "").split(";")[0].trim();
   const spec = ALLOWED[contentType];
-  if (!spec) return fail("Use a JPEG, PNG or WebP photo.", 415);
+  if (!spec) return fail(t("server.photoWrongType"), 415);
 
   const declared = Number(request.headers.get("content-length") ?? 0);
-  if (declared > MAX_BYTES) return fail("That photo is over 12MB.", 413);
+  if (declared > MAX_BYTES) return fail(t("server.photoTooLarge", { max: maxMb }), 413);
 
   const bytes = new Uint8Array(await request.arrayBuffer());
-  if (bytes.byteLength === 0) return fail("The photo was empty.", 400);
-  if (bytes.byteLength > MAX_BYTES) return fail("That photo is over 12MB.", 413);
+  if (bytes.byteLength === 0) return fail(t("server.photoEmpty"), 400);
+  if (bytes.byteLength > MAX_BYTES) return fail(t("server.photoTooLarge", { max: maxMb }), 413);
   // A correct content-type header proves nothing; the file's own bytes do.
-  if (!spec.magic(bytes)) return fail("That file isn't the image type it claims to be.", 415);
+  if (!spec.magic(bytes)) return fail(t("server.photoNotWhatItClaims"), 415);
 
   // Server-generated key: the client never influences where its bytes land.
   const key = `${userPrefix(uid)}${crypto.randomUUID()}.${spec.ext}`;
@@ -73,14 +81,19 @@ export async function POST(request: Request) {
 
 /** Removes every photo belonging to the caller. */
 export async function DELETE(request: Request) {
+  const t = serverT(requestLocale(request));
+
   let uid: string;
   try {
     ({ uid } = await requireUser(request));
   } catch (error) {
-    return fail(error instanceof AuthError ? error.message : "Unauthorized.", 401);
+    // The specific reason — no token, expired token, unconfigured project — is
+    // a server detail. The caller gets one translated line either way.
+    if (!(error instanceof AuthError)) console.error("[glowzen] Auth failed:", error);
+    return fail(t("server.unauthorized"), 401);
   }
 
-  if (!rateLimit(`delete:${uid}`, 6, 60_000)) return fail("Too many requests.", 429);
+  if (!rateLimit(`delete:${uid}`, 6, 60_000)) return fail(t("server.tooManyRequests"), 429);
   if (!isR2Configured) return Response.json({ deleted: 0 });
 
   const client = r2();

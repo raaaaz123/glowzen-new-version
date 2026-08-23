@@ -10,15 +10,16 @@ import { TopBar } from "@/components/app/TopBar";
 import { StickyCta } from "@/components/app/StickyCta";
 import { useToast } from "@/components/ui/Toast";
 import { useGlow } from "@/lib/state/GlowContext";
+import { useT } from "@/lib/i18n/I18nContext";
 import { photoGuide } from "@/lib/data/showcase";
 import { submitPhoto } from "@/services/analysisService";
 
-const GUIDELINES = [
-  "Face the camera",
-  "Good lighting",
-  "No sunglasses",
-  "No heavy filters",
-  "Keep your face visible",
+const GUIDELINE_KEYS = [
+  "upload.guide1",
+  "upload.guide2",
+  "upload.guide3",
+  "upload.guide4",
+  "upload.guide5",
 ];
 
 const MAX_MB = 12;
@@ -26,6 +27,7 @@ const MAX_MB = 12;
 export default function UploadPage() {
   const router = useRouter();
   const toast = useToast();
+  const t = useT();
   const { photoUrl, setPhotoUrl, setPhotoKey, gender } = useGlow();
   const guide = photoGuide(gender);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -36,11 +38,11 @@ export default function UploadPage() {
   async function handleFile(file: File | undefined) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setError("That file isn't an image. Choose a photo instead.");
+      setError(t("upload.notAnImage"));
       return;
     }
     if (file.size > MAX_MB * 1024 * 1024) {
-      setError(`That photo is over ${MAX_MB}MB. Choose a smaller one.`);
+      setError(t("upload.tooLarge", { max: MAX_MB }));
       return;
     }
     setError(null);
@@ -49,9 +51,9 @@ export default function UploadPage() {
       const stored = await submitPhoto(file);
       setPhotoUrl(stored.url);
       setPhotoKey(stored.key || null);
-      toast("Photo added.");
+      toast(t("upload.added"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "We couldn't read that photo. Try another one.");
+      setError(e instanceof Error ? e.message : t("upload.unreadable"));
     } finally {
       setUploading(false);
     }
@@ -59,16 +61,14 @@ export default function UploadPage() {
 
   return (
     <main className="min-h-svh px-5 pb-4 lg:mx-auto lg:max-w-[900px] lg:px-8">
-      <TopBar back sticky={false} action={<span className="eyebrow">Your photo</span>} />
+      <TopBar back sticky={false} action={<span className="eyebrow">{t("upload.eyebrow")}</span>} />
 
       <div className="lg:grid lg:grid-cols-[1.1fr_1fr] lg:items-start lg:gap-12">
         <div>
           <h1 className="type-display mt-4 text-[clamp(2rem,7.5vw,2.6rem)]">
-            Let&apos;s see where you&apos;re starting.
+            {t("upload.title")}
           </h1>
-          <p className="mt-3 text-[14px] leading-relaxed text-muted">
-            Use a clear photo facing the camera. Natural lighting works best.
-          </p>
+          <p className="mt-3 text-[14px] leading-relaxed text-muted">{t("upload.subtitle")}</p>
 
           {/* ——— drop / preview area */}
           <div className="mt-7">
@@ -76,7 +76,7 @@ export default function UploadPage() {
               <div className="animate-fade relative">
                 <ImageFrame
                   src={photoUrl}
-                  alt="Your photo"
+                  alt={t("upload.yourPhoto")}
                   className="max-h-[46svh] rounded-card"
                   expandable
                   priority
@@ -86,10 +86,10 @@ export default function UploadPage() {
                     setPhotoUrl(null);
                     setPhotoKey(null);
                   }}
-                  className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-2 text-[12px] text-white backdrop-blur-md transition-colors hover:bg-black/75"
+                  className="absolute top-3 start-3 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-2 text-[12px] text-white backdrop-blur-md transition-colors hover:bg-black/75"
                 >
                   <Trash2 className="size-3.5" aria-hidden />
-                  Remove
+                  {t("upload.remove")}
                 </button>
               </div>
             ) : (
@@ -102,9 +102,11 @@ export default function UploadPage() {
                   <Camera className="size-6" aria-hidden />
                 </span>
                 <span className="text-[15px] font-medium">
-                  {uploading ? "Adding your photo…" : "Add your photo"}
+                  {uploading ? t("upload.adding") : t("upload.addPhoto")}
                 </span>
-                <span className="mt-1.5 text-[13px] text-muted">JPG or PNG, up to {MAX_MB}MB</span>
+                <span className="mt-1.5 text-[13px] text-muted">
+                  {t("upload.fileHint", { max: MAX_MB })}
+                </span>
               </button>
             )}
           </div>
@@ -119,11 +121,11 @@ export default function UploadPage() {
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Button variant="secondary" size="md" onClick={() => cameraRef.current?.click()}>
               <Camera className="size-4" aria-hidden />
-              Take photo
+              {t("upload.takePhoto")}
             </Button>
             <Button variant="secondary" size="md" onClick={() => galleryRef.current?.click()}>
               <ImageIcon className="size-4" aria-hidden />
-              Choose from gallery
+              {t("upload.chooseGallery")}
             </Button>
           </div>
 
@@ -147,17 +149,17 @@ export default function UploadPage() {
         {/* ——— guidance */}
         <div className="mt-10 lg:mt-4">
           <Card className="p-5">
-            <p className="eyebrow mb-4">What a good photo looks like</p>
+            <p className="eyebrow mb-4">{t("upload.guideTitle")}</p>
             <div className="grid grid-cols-2 gap-3">
-              <Example src={guide.good} label="Works" good />
-              <Example src={guide.bad} label="Too dark" />
+              <Example src={guide.good} label={t("upload.guideWorks")} good />
+              <Example src={guide.bad} label={t("upload.guideTooDark")} />
             </div>
 
             <ul className="mt-5 space-y-2.5">
-              {GUIDELINES.map((g) => (
-                <li key={g} className="flex items-center gap-3 text-[13.5px] text-cream/85">
+              {GUIDELINE_KEYS.map((key) => (
+                <li key={key} className="flex items-center gap-3 text-[13.5px] text-cream/85">
                   <Check className="size-3.5 shrink-0 text-champagne" strokeWidth={2.6} aria-hidden />
-                  {g}
+                  {t(key)}
                 </li>
               ))}
             </ul>
@@ -165,14 +167,14 @@ export default function UploadPage() {
 
           <p className="mt-4 flex items-start gap-2 px-1 text-[12px] leading-relaxed text-faint">
             <Lock className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            Your photo is only used to create your personal analysis.
+            {t("upload.privacy")}
           </p>
         </div>
       </div>
 
-      <StickyCta note="You can delete your photo any time from Profile.">
+      <StickyCta note={t("upload.deleteNote")}>
         <Button fullWidth disabled={!photoUrl} onClick={() => router.push("/analyzing")}>
-          Analyze my appearance
+          {t("upload.cta")}
         </Button>
       </StickyCta>
     </main>
