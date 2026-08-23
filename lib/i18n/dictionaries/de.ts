@@ -230,6 +230,7 @@ export const de: Dictionary = {
     foundChangesCount: "{count} Veränderungen",
     biggestOpportunity: "Deine größte Chance",
     seeStyles: "Empfohlene Frisuren ansehen",
+    seeBeardShapes: "Bartformen an dir sehen",
     exampleAlt: "Beispiel: {title}",
     today: "Heute",
     whereYouStand: "Wo dein Look steht",

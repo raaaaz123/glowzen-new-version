@@ -230,6 +230,7 @@ export const ar: Dictionary = {
     foundChangesCount: "{count} تغييرات",
     biggestOpportunity: "أكبر فرصة لديك",
     seeStyles: "عرض التسريحات المقترحة",
+    seeBeardShapes: "شاهد أشكال اللحية على وجهك",
     exampleAlt: "مثال على {title}",
     today: "اليوم",
     whereYouStand: "أين يقف مظهرك",

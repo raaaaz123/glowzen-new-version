@@ -16,7 +16,7 @@ export function CompareSlider({
   className,
   frameClassName = "aspect-[4/5]",
   imagePosition = "object-center",
-  priority,
+  priority = true,
 }: {
   /** Nullable: a scan can have no readable photo, and "" is not a valid src. */
   before: string | null;
@@ -28,6 +28,13 @@ export function CompareSlider({
   /** Override the default 4:5 frame, e.g. to cap the hero's height. */
   frameClassName?: string;
   imagePosition?: string;
+  /**
+   * Eager by default. This component is never decoration — it is the render
+   * the screen exists to show, and it is above the fold on every screen that
+   * uses it. Lazy images that enter the viewport during a client render often
+   * do not fetch until the first scroll, which reads as a preview that never
+   * arrived.
+   */
   priority?: boolean;
 }) {
   const { t, dir } = useI18n();

@@ -17,6 +17,29 @@ import { getIdToken } from "@/lib/firebase/auth";
 import { useGlow, type SubscriptionState } from "@/lib/state/GlowContext";
 import { useT } from "@/lib/i18n/I18nContext";
 import { getAnalysis } from "@/services/analysisService";
+import type { Analysis, OpportunityArea } from "@/lib/types";
+
+/**
+ * Where an opportunity actually leads.
+ *
+ * Only two screens can render a change onto the reader's own face, and each
+ * covers one area: /styles the cut, /beard the shape. Sending every card to
+ * /improvements meant the hair card offered a preview and the beard card —
+ * the same kind of change, with the same renderer behind it — offered a page
+ * of text. Anything we cannot show goes on to the written steps.
+ */
+function destinationFor(
+  area: OpportunityArea,
+  analysis: Analysis,
+): { href: string; labelKey: string } {
+  if (area === "hair" && (analysis.hairstyles?.length ?? 0) > 0) {
+    return { href: "/styles", labelKey: "results.seeStyles" };
+  }
+  if (area === "grooming" && (analysis.beard?.styles.length ?? 0) > 0) {
+    return { href: "/beard", labelKey: "results.seeBeardShapes" };
+  }
+  return { href: "/improvements", labelKey: "results.whatToDo" };
+}
 
 /**
  * Asks our server to verify the checkout with Polar and store the result.
@@ -48,12 +71,22 @@ export default function ResultsPage() {
   /** Replacing the URL re-runs the effect below; this keeps it to one run. */
   const confirmed = useRef(false);
 
+  // The biggest opportunity is not always the hair one, so the hero button
+  // has to follow the same routing as the cards below it.
+  const heroDestination = data
+    ? destinationFor(data.opportunities[0].area, data)
+    : { href: "/improvements", labelKey: "results.whatToDo" };
+
   // After a successful Polar checkout the user lands here with ?subscribed=1
   // and the checkout id. Unlock immediately so nobody who has just paid is
   // looking at a paywall, then have the server verify the checkout with Polar
   // and write the real plan and expiry — the webhook is the durable record,
   // but it is not something this page can wait on.
   useEffect(() => {
+    // Not before the provider has read localStorage. Child effects run before
+    // parent ones, so an unlock written here first is promptly overwritten by
+    // the hydration spreading the stored (unsubscribed) session back over it.
+    if (!hydrated) return;
     if (searchParams.get("subscribed") !== "1" || confirmed.current) return;
     confirmed.current = true;
     const checkoutId = searchParams.get("checkout_id");
@@ -76,7 +109,7 @@ export default function ResultsPage() {
         // The optimistic unlock stands; the webhook still has the last word.
         console.warn("[results] could not confirm checkout:", err);
       });
-  }, [searchParams, setSubscription, router]);
+  }, [hydrated, searchParams, setSubscription, router]);
 
   // Non-subscribers who land here directly get redirected to the preview
   useEffect(() => {
@@ -130,7 +163,7 @@ export default function ResultsPage() {
             {t("results.foundChanges", { count: data.opportunities.length })}
           </p>
 
-          {/* ——— the one thing to do first */}
+          {/* ——— the one thing to do first ─── */}
           <Card tone="linen" className="mt-6 flex flex-col-reverse overflow-hidden lg:flex-row lg:items-stretch">
             <div className="p-6 lg:flex-1 lg:p-8">
               <p className="font-mono text-[10px] tracking-[0.18em] text-black/45 uppercase">
@@ -157,20 +190,23 @@ export default function ResultsPage() {
               </p>
 
               <Link
-                href="/styles"
+                href={heroDestination.href}
                 className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-linen-ink px-5 py-3.5 text-[14px] font-medium text-linen transition-transform active:scale-[.98]"
               >
-                {t("results.seeStyles")}
+                {t(heroDestination.labelKey)}
                 <ArrowRight className="size-4 rtl:-scale-x-100" aria-hidden />
               </Link>
             </div>
 
+            {/* Above the fold and the first thing on the report: loading it
+                lazily only delays the one image the page is about. */}
             <ImageFrame
               src={data.opportunities[0].image}
               alt={t("results.exampleAlt", { title: data.opportunities[0].title })}
               ratio="aspect-[16/10] lg:aspect-auto"
               className="lg:w-64 lg:shrink-0"
               imgClassName={data.opportunities[0].imagePosition}
+              priority
               expandable
             />
           </Card>
@@ -200,10 +236,10 @@ export default function ResultsPage() {
                   </div>
                   <p className="mt-3.5 text-[13.5px] leading-relaxed text-muted">{op.description}</p>
                   <Link
-                    href="/improvements"
+                    href={destinationFor(op.area, data).href}
                     className="mt-4 inline-flex items-center gap-1.5 text-[13px] text-champagne underline-offset-4 hover:underline"
                   >
-                    {t("results.whatToDo")}
+                    {t(destinationFor(op.area, data).labelKey)}
                     <ArrowUpRight className="size-3.5 rtl:-scale-x-100" aria-hidden />
                   </Link>
                 </div>

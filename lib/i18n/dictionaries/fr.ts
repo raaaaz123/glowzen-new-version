@@ -231,6 +231,7 @@ export const fr: Dictionary = {
     foundChangesCount: "{count} changements",
     biggestOpportunity: "Ta plus grande marge de progression",
     seeStyles: "Voir les coiffures recommandées",
+    seeBeardShapes: "Voir les barbes sur ton visage",
     exampleAlt: "Exemple : {title}",
     today: "Aujourd'hui",
     whereYouStand: "Où en est ton look",

@@ -233,6 +233,7 @@ export const en = {
     foundChangesCount: "{count} changes",
     biggestOpportunity: "Your biggest opportunity",
     seeStyles: "See recommended styles",
+    seeBeardShapes: "See beard shapes on you",
     exampleAlt: "{title} example",
     today: "Today",
     whereYouStand: "Where your look stands",

@@ -1,7 +1,7 @@
 "use client";
 
 import { Expand, X } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useT } from "@/lib/i18n/I18nContext";
 import { cn } from "@/lib/utils";
 
@@ -32,12 +32,27 @@ export function ImageFrame({
 }) {
   const t = useT();
   const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [open, setOpen] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
 
-  // A cached image can already be complete before onLoad is attached.
+  /**
+   * `load` does not bubble, so React attaches onLoad to the element itself at
+   * commit time — and an image that finishes before that simply never fires it
+   * for us. The frame then sits at opacity 0 over its own skeleton with a
+   * perfectly good photo inside it, which is what an empty card on the report
+   * actually is. Checking `complete` as the node mounts catches the ones the
+   * effect below is already too late for.
+   */
+  const attach = useCallback((node: HTMLImageElement | null) => {
+    imgRef.current = node;
+    if (node?.complete && node.naturalWidth > 0) setLoaded(true);
+  }, []);
+
   useEffect(() => {
-    if (imgRef.current?.complete) setLoaded(true);
+    setFailed(false);
+    const img = imgRef.current;
+    if (img?.complete && img.naturalWidth > 0) setLoaded(true);
   }, [src]);
 
   useEffect(() => {
@@ -53,16 +68,19 @@ export function ImageFrame({
         {/* Pulse only while something is actually on its way. With no src
             there is nothing to wait for, and an empty one makes the browser
             re-request the whole page. */}
-        {src && !loaded && (
+        {src && !loaded && !failed && (
           <div className="absolute inset-0 animate-pulse bg-raised" aria-hidden />
         )}
         {src && (
           <img
-            ref={imgRef}
+            ref={attach}
             src={src}
             alt={alt}
             loading={priority ? "eager" : "lazy"}
             onLoad={() => setLoaded(true)}
+            // A frame that will never fill should stop pretending it is about
+            // to: the pulse is a promise, and this one cannot be kept.
+            onError={() => setFailed(true)}
             className={cn(
               "size-full object-cover transition-opacity duration-500",
               loaded ? "opacity-100" : "opacity-0",

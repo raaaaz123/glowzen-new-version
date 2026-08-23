@@ -229,6 +229,7 @@ export const ja: Dictionary = {
     foundChangesCount: "{count}つの変化",
     biggestOpportunity: "もっとも大きな伸びしろ",
     seeStyles: "おすすめの髪型を見る",
+    seeBeardShapes: "自分の顔でひげを見る",
     exampleAlt: "{title}の例",
     today: "今日",
     whereYouStand: "今の見た目の現在地",

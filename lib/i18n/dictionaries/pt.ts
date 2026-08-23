@@ -230,6 +230,7 @@ export const pt: Dictionary = {
     foundChangesCount: "{count} mudanças",
     biggestOpportunity: "Sua maior oportunidade",
     seeStyles: "Ver estilos recomendados",
+    seeBeardShapes: "Ver as barbas no seu rosto",
     exampleAlt: "Exemplo de {title}",
     today: "Hoje",
     whereYouStand: "Onde está o seu visual",
