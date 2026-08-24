@@ -13,7 +13,6 @@ export function MixpanelProvider({ children }: { children: React.ReactNode }) {
       track_pageview: true,
       persistence: "localStorage",
       record_sessions_percent: 100,
-      record_sessions_external_events: true,
     });
   }, []);
 
